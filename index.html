@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wonderland Portal</title>
+
+  <!-- SweetAlert2 for beautiful alerts -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      color: red;
+    }
+
+    .logo-container {
+      text-align: center;
+    }
+
+    .logo-box {
+      width: 160px;
+      height: 160px;
+      background: white;
+      border: 4px solid red;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0 auto;
+      animation: rotate 6s linear infinite;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    /* Custom coded logo */
+    .wonderland-logo {
+      width: 100px;
+      height: 100px;
+      position: relative;
+    }
+
+    /* Academic cap base */
+    .cap {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 70px;
+      height: 20px;
+      background: red;
+      border-radius: 4px;
+    }
+
+    /* Tassel */
+    .tassel {
+      position: absolute;
+      top: 20px;
+      left: 80%;
+      width: 4px;
+      height: 30px;
+      background: red;
+    }
+
+    .tassel::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: -4px;
+      width: 12px;
+      height: 12px;
+      background: red;
+      border-radius: 50%;
+    }
+
+    /* Stylized "W" */
+    .letter-w {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 48px;
+      font-weight: bold;
+      color: red;
+      font-family: 'Georgia', serif;
+      line-height: 1;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    h1 {
+      margin-top: 24px;
+      font-size: 28px;
+      color: red;
+    }
+
+    .loading {
+      margin-top: 12px;
+      font-style: italic;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo-container">
+    <div class="logo-box">
+      <div class="wonderland-logo">
+        <div class="cap"></div>
+        <div class="tassel"></div>
+        <div class="letter-w">W</div>
+      </div>
+    </div>
+    <h1>Welcome to Wonderland</h1>
+    <p class="loading">Checking your session...</p>
+  </div>
+
+  <!-- Firebase Auth + Redirect Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = "dashboard.html";
+      } else {
+        window.location.href = "signup.html";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Profile – Wonderland</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: white;
+      color: #333;
+      padding: 20px;
+      min-height: 100vh;
+      padding-bottom: 100px; /* Prevent footer overlap */
+    }
+
+    .profile-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .profile-avatar {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: #e50914;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 36px;
+      margin: 0 auto 16px;
+    }
+
+    .profile-name {
+      font-size: 24px;
+      font-weight: bold;
+      color: #e50914;
+      margin-bottom: 8px;
+    }
+
+    .profile-email {
+      color: #666;
+      font-size: 16px;
+    }
+
+    .info-card {
+      background: #fff9f9;
+      border: 1px solid #ffebee;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .info-row {
+      display: flex;
+      margin-bottom: 12px;
+    }
+
+    .info-label {
+      font-weight: bold;
+      color: #e50914;
+      min-width: 100px;
+    }
+
+    .info-value {
+      color: #444;
+    }
+
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .btn {
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn-live {
+      background: #e50914;
+      color: white;
+    }
+
+    .btn-logout {
+      background: #f1f1f1;
+      color: #333;
+      border: 1px solid #ddd;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      z-index: 1000;
+    }
+
+    .footer-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #888;
+      font-size: 12px;
+      text-decoration: none;
+    }
+
+    .footer-btn.active {
+      color: #e50914;
+      font-weight: bold;
+    }
+
+    .footer-btn i {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="profile-header">
+    <div class="profile-avatar" id="profileAvatar">U</div>
+    <div class="profile-name" id="profileName">Loading...</div>
+    <div class="profile-email" id="profileEmail">Loading...</div>
+  </div>
+
+  <div class="info-card">
+    <div class="info-row">
+      <div class="info-label">Phone:</div>
+      <div class="info-value" id="profilePhone">—</div>
+    </div>
+    <div class="info-row">
+      <div class="info-label">Class:</div>
+      <div class="info-value" id="profileClass">—</div>
+    </div>
+  </div>
+
+  <div class="action-buttons">
+    <div class="btn btn-live" id="liveBtn">
+      <i class="fas fa-video"></i> Live
+    </div>
+    <div class="btn btn-logout" id="logoutBtn">
+      <i class="fas fa-sign-out-alt"></i> Log Out
+    </div>
+  </div>
+
+  <footer>
+    <a href="dashboard.html" class="footer-btn">
+      <i class="fas fa-home"></i> Home
+    </a>
+    <a href="friends.html" class="footer-btn">
+      <i class="fas fa-users"></i> Friends
+    </a>
+    <a href="market.html" class="footer-btn">
+      <i class="fas fa-shopping-bag"></i> Market
+    </a>
+    <a href="profile.html" class="footer-btn active">
+      <i class="fas fa-user"></i> Profile
+    </a>
+  </footer>
+
+  <script type="module">
+    // ✅ CORRECT IMPORTS – NO TRAILING SPACES
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    function getInitials(name) {
+      if (!name) return 'U';
+      return name.trim().charAt(0).toUpperCase();
+    }
+
+    async function loadProfile() {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const email = user.email;
+      document.getElementById('profileEmail').textContent = email;
+
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      let username = email.split('@')[0];
+      let phone = '—';
+      let userClass = '—';
+
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        username = data.username || username;
+        phone = data.phone || '—';
+        userClass = data.class || '—';
+      }
+
+      document.getElementById('profileName').textContent = username;
+      document.getElementById('profileAvatar').textContent = getInitials(username);
+      document.getElementById('profilePhone').textContent = phone;
+      document.getElementById('profileClass').textContent = userClass;
+    }
+
+    // 🔘 SET UP BUTTONS AFTER DOM LOADS
+    document.addEventListener('DOMContentLoaded', () => {
+      // Live button
+      const liveBtn = document.getElementById('liveBtn');
+      if (liveBtn) {
+        liveBtn.addEventListener('click', () => {
+          window.location.href = 'live.html';
+        });
+      }
+
+      // Logout button
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+          Swal.fire({
+            title: 'Are you sure?',
+            text: "You will be logged out of your account.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, log out!',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+          }).then((result) => {
+            if (result.isConfirmed) {
+              signOut(auth).then(() => {
+                Swal.fire('Logged out!', 'You have been signed out.', 'success').then(() => {
+                  window.location.href = 'login.html';
+                });
+              }).catch(() => {
+                Swal.fire('Error', 'Failed to log out.', 'error');
+              });
+            }
+          });
+        });
+      }
+    });
+
+    // 🔐 Auth state listener
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loadProfile();
+      } else {
+        window.location.href = 'login.html';
+      }
+    });
+  </script>
+</body>
+</html>

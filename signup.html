@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign Up - Wonderland</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    body {
+      background: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .signup-container {
+      width: 100%;
+      max-width: 420px;
+      background: #fff;
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      border: 2px solid #ff0000;
+    }
+    h2 {
+      text-align: center;
+      color: red;
+      margin-bottom: 24px;
+      font-size: 26px;
+    }
+    .input-group {
+      margin-bottom: 18px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #333;
+      font-weight: 600;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+    input:focus {
+      outline: none;
+      border-color: red;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: flex-start;
+      margin: 16px 0 24px;
+    }
+    .checkbox-group input {
+      width: auto;
+      margin-right: 10px;
+      margin-top: 4px;
+    }
+    .checkbox-group label {
+      font-weight: normal;
+      color: #555;
+      font-size: 14px;
+    }
+    .checkbox-group a {
+      color: red;
+      text-decoration: none;
+    }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .btn:hover {
+      background: #cc0000;
+    }
+    .btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    .login-link {
+      text-align: center;
+      margin-top: 20px;
+      color: #555;
+    }
+    .login-link a {
+      color: red;
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="signup-container">
+    <h2>Create Your Account</h2>
+    <form id="signupForm">
+      <div class="input-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="Enter your username" required />
+      </div>
+      <div class="input-group">
+        <label for="email">Gmail</label>
+        <input type="email" id="email" placeholder="your.email@gmail.com" required />
+      </div>
+      <div class="input-group">
+        <label for="phone">Phone Number</label>
+        <input type="tel" id="phone" placeholder="e.g. +1234567890" required />
+      </div>
+      <div class="input-group">
+        <label for="class">Class</label>
+        <input type="text" id="class" placeholder="e.g. Grade 10" required />
+      </div>
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="At least 6 characters" required />
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="terms" required />
+        <label for="terms">
+          I agree with <a href="#" onclick="showGuidelines(); return false;">Wonderland Community Guidelines</a>
+        </label>
+      </div>
+      <button type="submit" class="btn" id="signupBtn">Sign Up</button>
+    </form>
+    <div class="login-link">
+      Already have an account? <a href="login.html">Log In</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const userClass = document.getElementById('class').value.trim();
+      const password = document.getElementById('password').value;
+      const terms = document.getElementById('terms').checked;
+      const btn = document.getElementById('signupBtn');
+
+      // Validation
+      if (!username || username.length < 3) {
+        Swal.fire('Oops!', 'Username must be at least 3 characters.', 'warning');
+        return;
+      }
+      if (!email.includes('@gmail.com')) {
+        Swal.fire('Oops!', 'Please use a valid Gmail address.', 'warning');
+        return;
+      }
+      if (!phone || phone.length < 10) {
+        Swal.fire('Oops!', 'Please enter a valid phone number.', 'warning');
+        return;
+      }
+      if (password.length < 6) {
+        Swal.fire('Oops!', 'Password must be at least 6 characters.', 'warning');
+        return;
+      }
+      if (!terms) {
+        Swal.fire('Required', 'You must agree to the Community Guidelines.', 'info');
+        return;
+      }
+
+      // Show "Signing up..." alert
+      Swal.fire({
+        title: 'Signing up...',
+        html: 'Please wait while we create your account.',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      try {
+        // Create auth user
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Save to Firestore
+        const { getFirestore, doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        const db = getFirestore(app);
+        await setDoc(doc(db, "users", user.uid), {
+          username: username,
+          email: email,
+          phone: phone,
+          class: userClass,
+          createdAt: new Date().toISOString()
+        });
+
+        // Close loading, show success
+        Swal.close();
+        Swal.fire({
+          title: 'Success!',
+          text: 'Your account has been created successfully!',
+          icon: 'success',
+          confirmButtonText: 'Go to Login'
+        }).then(() => {
+          window.location.href = 'login.html';
+        });
+
+      } catch (error) {
+        Swal.close();
+        let message = 'Something went wrong. Please try again.';
+        if (error.code === 'auth/email-already-in-use') {
+          message = 'This email is already registered. Please log in.';
+        } else if (error.code === 'auth/invalid-email') {
+          message = 'Invalid email address.';
+        } else if (error.code === 'auth/weak-password') {
+          message = 'Password is too weak. Use at least 6 characters.';
+        } else if (error.code === 'permission-denied' || error.code === 'unavailable') {
+          message = 'Unable to save profile. Please check your internet connection.';
+        }
+        Swal.fire('Sign Up Failed', message, 'error');
+      }
+    });
+
+    function showGuidelines() {
+      Swal.fire({
+        title: 'Wonderland Community Guidelines',
+        html: `
+          <ul style="text-align: left; line-height: 1.6;">
+            <li>Be respectful to all users.</li>
+            <li>No hate speech, bullying, or harassment.</li>
+            <li>Do not share personal or sensitive information.</li>
+            <li>Posts must follow school values and policies.</li>
+            <li>Violations may result in account suspension.</li>
+          </ul>
+        `,
+        icon: 'info',
+        confirmButtonText: 'I Understand'
+      });
+    }
+  </script>
+</body>
+</html>

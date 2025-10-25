@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Friends – Wonderland</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: white;
+      color: #333;
+      padding-bottom: 70px;
+    }
+
+    header {
+      background: white;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #e50914;
+    }
+
+    #addBtn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #e50914;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .friends-list, .all-users-list {
+      padding: 16px;
+    }
+
+    .user-item {
+      display: flex;
+      align-items: center;
+      padding: 14px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .user-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #e50914;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      margin-right: 14px;
+      flex-shrink: 0;
+    }
+
+    .user-info {
+      flex: 1;
+    }
+
+    .user-name {
+      font-weight: bold;
+      color: #e50914;
+      font-size: 16px;
+    }
+
+    .badge {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: red;
+      color: white;
+      font-size: 12px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #888;
+      font-size: 18px;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+
+    .footer-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #888;
+      font-size: 12px;
+      text-decoration: none;
+    }
+
+    .footer-btn.active {
+      color: #e50914;
+      font-weight: bold;
+    }
+
+    .footer-btn i {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .back-btn {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      background: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      cursor: pointer;
+      z-index: 90;
+      display: none;
+    }
+
+    .back-btn i {
+      color: #e50914;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="back-btn" id="backBtn">
+    <i class="fas fa-arrow-left"></i>
+  </div>
+
+  <header>
+    <div class="header-title">Friends</div>
+    <div id="addBtn">+</div>
+  </header>
+
+  <div class="friends-list" id="friendsList">
+    <!-- Friends will appear here -->
+  </div>
+
+  <div class="all-users-list" id="allUsersList" style="display: none;">
+    <!-- All users will appear here -->
+  </div>
+
+  <footer>
+    <a href="dashboard.html" class="footer-btn">
+      <i class="fas fa-home"></i> Home
+    </a>
+    <a href="friends.html" class="footer-btn active">
+      <i class="fas fa-users"></i> Friends
+    </a>
+    <a href="market.html" class="footer-btn">
+      <i class="fas fa-shopping-bag"></i> Market
+    </a>
+    <a href="notifications.html" class="footer-btn">
+      <i class="fas fa-bell"></i> Alerts
+    </a>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+
+    function getInitials(name) {
+      return name ? name.charAt(0).toUpperCase() : 'U';
+    }
+
+    // Always include bluepay863@gmail.com as first friend
+    async function getAdminUser() {
+      const usersRef = collection(db, 'users');
+      const snapshot = await getDocs(usersRef);
+      let adminDoc = null;
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.email === 'bluepay863@gmail.com') {
+          adminDoc = { uid: doc.id, ...data };
+        }
+      });
+      return adminDoc;
+    }
+
+    // Check for unread messages in a chat room
+    async function hasUnreadMessages(roomId, currentUserId) {
+      const roomRef = doc(db, 'chats', roomId);
+      const roomSnap = await getDoc(roomRef);
+      if (!roomSnap.exists()) return false;
+
+      const messages = roomSnap.data().messages || [];
+      if (messages.length === 0) return false;
+
+      // Find last message
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.senderId === currentUserId) return false;
+
+      // Check if user has read it
+      const readKey = `read_${currentUserId}`;
+      return !lastMsg[readKey]; // true if unread
+    }
+
+    // Render friends list (including admin as first)
+    async function renderFriendsList() {
+      const friendsListEl = document.getElementById('friendsList');
+      const admin = await getAdminUser();
+
+      // Get chat rooms
+      const chatsRef = collection(db, 'chats');
+      const chatSnap = await getDocs(chatsRef);
+      const rooms = chatSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      const friendUids = new Set();
+      if (admin) friendUids.add(admin.uid);
+
+      rooms.forEach(room => {
+        if (room.participants?.includes(currentUser.uid)) {
+          const other = room.participants.find(uid => uid !== currentUser.uid);
+          if (other) friendUids.add(other);
+        }
+      });
+
+      // Fetch user data
+      const friendArray = [];
+      if (admin) {
+        friendArray.push(admin);
+      }
+
+      for (const uid of friendUids) {
+        if (admin && uid === admin.uid) continue;
+        const userDoc = await getDoc(doc(db, 'users', uid));
+        if (userDoc.exists()) {
+          friendArray.push({ uid: userDoc.id, ...userDoc.data() });
+        }
+      }
+
+      if (friendArray.length === 0) {
+        friendsListEl.innerHTML = `<div class="empty-state">No friends yet</div>`;
+        return;
+      }
+
+      friendsListEl.innerHTML = '';
+      for (const user of friendArray) {
+        const roomKey = [currentUser.uid, user.uid].sort().join('_');
+        const hasUnread = await hasUnreadMessages(roomKey, currentUser.uid);
+
+        const userEl = document.createElement('div');
+        userEl.className = 'user-item';
+        userEl.innerHTML = `
+          <div class="user-avatar">${getInitials(user.username)}</div>
+          <div class="user-info">
+            <div class="user-name">${user.username}</div>
+          </div>
+          ${hasUnread ? '<div class="badge">1</div>' : ''}
+        `;
+        userEl.onclick = () => {
+          // Mark as read when opening
+          const roomRef = doc(db, 'chats', roomKey);
+          getDoc(roomRef).then(roomSnap => {
+            if (roomSnap.exists()) {
+              const messages = [...roomSnap.data().messages];
+              if (messages.length > 0) {
+                const lastIdx = messages.length - 1;
+                const lastMsg = messages[lastIdx];
+                if (lastMsg.senderId !== currentUser.uid) {
+                  messages[lastIdx] = {
+                    ...lastMsg,
+                    [`read_${currentUser.uid}`]: true
+                  };
+                  updateDoc(roomRef, { messages });
+                }
+              }
+            }
+          });
+
+          window.location.href = `messenger.html?roomId=${roomKey}&peerUid=${user.uid}&peerName=${encodeURIComponent(user.username)}`;
+        };
+        friendsListEl.appendChild(userEl);
+      }
+    }
+
+    // Load all users (except self)
+    async function loadAllUsers() {
+      const usersRef = collection(db, 'users');
+      const snapshot = await getDocs(usersRef);
+      const allUsersListEl = document.getElementById('allUsersList');
+      allUsersListEl.innerHTML = '';
+
+      const users = [];
+      snapshot.forEach(doc => {
+        if (doc.id !== currentUser.uid) {
+          users.push({ uid: doc.id, ...doc.data() });
+        }
+      });
+
+      if (users.length === 0) {
+        allUsersListEl.innerHTML = `<div class="empty-state">No other users found</div>`;
+      } else {
+        users.forEach(user => {
+          const userEl = document.createElement('div');
+          userEl.className = 'user-item';
+          userEl.innerHTML = `
+            <div class="user-avatar">${getInitials(user.username)}</div>
+            <div class="user-info">
+              <div class="user-name">${user.username}</div>
+            </div>
+          `;
+          userEl.onclick = () => {
+            const roomKey = [currentUser.uid, user.uid].sort().join('_');
+            // Ensure chat room exists
+            const roomRef = doc(db, 'chats', roomKey);
+            getDoc(roomRef).then(roomSnap => {
+              if (!roomSnap.exists()) {
+                setDoc(roomRef, {
+                  participants: [currentUser.uid, user.uid],
+                  messages: []
+                });
+              }
+            });
+            window.location.href = `messenger.html?roomId=${roomKey}&peerUid=${user.uid}&peerName=${encodeURIComponent(user.username)}`;
+          };
+          allUsersListEl.appendChild(userEl);
+        });
+      }
+
+      // Switch view
+      document.getElementById('friendsList').style.display = 'none';
+      document.getElementById('allUsersList').style.display = 'block';
+      document.querySelector('.header-title').textContent = 'All Users';
+      document.getElementById('backBtn').style.display = 'flex';
+    }
+
+    document.getElementById('backBtn').onclick = () => {
+      document.getElementById('allUsersList').style.display = 'none';
+      document.getElementById('friendsList').style.display = 'block';
+      document.querySelector('.header-title').textContent = 'Friends';
+      document.getElementById('backBtn').style.display = 'none';
+      renderFriendsList();
+    };
+
+    document.getElementById('addBtn').onclick = loadAllUsers;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        renderFriendsList();
+      } else {
+        window.location.href = 'login.html';
+      }
+    });
+  </script>
+</body>
+</html>

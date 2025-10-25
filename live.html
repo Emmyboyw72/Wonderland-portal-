@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live – Wonderland</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Agora SDK with fallback -->
+  <script>
+    (function() {
+      const primary = "https://cdn.agora.io/sdk/release/AgoraRTC_N-4.19.0.js";
+      const fallback = "https://cdn.jsdelivr.net/npm/agora-rtc-sdk-ng@4.19.0/dist/agora-rtc-sdk-ng.min.js";
+
+      function loadScript(src, onSuccess, onError) {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = onSuccess;
+        script.onerror = onError;
+        document.head.appendChild(script);
+      }
+
+      window.agoraLoaded = new Promise((resolve) => {
+        function init() {
+          if (typeof AgoraRTC !== 'undefined') resolve();
+          else {
+            console.error("Agora failed to load");
+            Swal.fire("Error", "Streaming engine unavailable. Disable ad blockers and refresh.", "error");
+          }
+        }
+        loadScript(primary, init, () => loadScript(fallback, init, init));
+      });
+    })();
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: #fff9f9;
+      color: #333;
+      padding-bottom: 20px;
+    }
+    header {
+      background: white;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .header-title {
+      font-size: 22px;
+      font-weight: bold;
+      color: #e50914;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: white;
+      margin: 16px auto;
+      max-width: 500px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .tab {
+      flex: 1;
+      padding: 14px;
+      text-align: center;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      background: #e50914;
+      color: white;
+    }
+    .tab-content {
+      display: none;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Video Players */
+    #localPlayer, #remotePlayer {
+      width: 100%;
+      height: 400px;
+      background: #000;
+      border-radius: 16px;
+      margin: 15px 0;
+    }
+
+    /* Viewer List */
+    .viewers-list {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .viewer-item {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 15px;
+    }
+    .viewer-item:last-child {
+      border-bottom: none;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 12px 24px;
+      margin: 8px 4px;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .btn-primary { background: #e50914; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn-secondary { background: #6c757d; color: white; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      color: #888;
+      padding: 40px 20px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-title">Wonderland Live</div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tab="watch">Watch Live</div>
+    <div class="tab" id="goLiveTab" data-tab="go">Go Live</div>
+  </div>
+
+  <!-- Watch Live Tab -->
+  <div class="tab-content active" id="watchTabContent">
+    <div id="remotePlayerContainer">
+      <div id="remotePlayer"></div>
+    </div>
+    <div style="text-align: center;">
+      <button class="btn btn-success" id="joinBtn">Join Stream</button>
+      <button class="btn btn-secondary" id="leaveWatchBtn" style="display:none;">Leave</button>
+    </div>
+    <div class="empty-state" id="noStreamMsg">
+      No live stream right now. Check back later!
+    </div>
+  </div>
+
+  <!-- Go Live Tab (Admin Only) -->
+  <div class="tab-content" id="goLiveTabContent">
+    <div id="localPlayerContainer">
+      <div id="localPlayer"></div>
+    </div>
+    <div style="text-align: center;">
+      <button class="btn btn-primary" id="startStreamBtn">Start Stream</button>
+      <button class="btn btn-secondary" id="stopStreamBtn" style="display:none;">Stop Stream</button>
+    </div>
+
+    <!-- Viewers List (Admin Only) -->
+    <div class="viewers-list" id="viewersList" style="display:none;">
+      <h3 style="margin-bottom: 12px; color: #e50914;">Live Viewers</h3>
+      <div id="viewersItems"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Wait for Agora
+    await window.agoraLoaded;
+
+    // Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, query, where, onSnapshot as onCollSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const AGORA_APP_ID = "fcfbeea054a84e529a1d984becbb4774";
+    const AGORA_CHANNEL = "wonderland_live";
+    const ADMIN_EMAIL = "bluepay863@gmail.com";
+
+    let currentUser = null;
+    let rtc = { client: null, remoteUsers: new Map() };
+
+    // DOM
+    const goLiveTab = document.getElementById("goLiveTab");
+    const watchTabContent = document.getElementById("watchTabContent");
+    const goLiveTabContent = document.getElementById("goLiveTabContent");
+    const joinBtn = document.getElementById("joinBtn");
+    const leaveWatchBtn = document.getElementById("leaveWatchBtn");
+    const startStreamBtn = document.getElementById("startStreamBtn");
+    const stopStreamBtn = document.getElementById("stopStreamBtn");
+    const noStreamMsg = document.getElementById("noStreamMsg");
+    const localPlayer = document.getElementById("localPlayer");
+    const remotePlayer = document.getElementById("remotePlayer");
+    const viewersList = document.getElementById("viewersList");
+    const viewersItems = document.getElementById("viewersItems");
+
+    // Tab Switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        const target = tab.getAttribute('data-tab');
+        if (target === 'watch') watchTabContent.classList.add('active');
+        else goLiveTabContent.classList.add('active');
+      });
+    });
+
+    // Show beautiful alert
+    function showAlert(message, isError = false) {
+      Swal.fire({
+        text: message,
+        icon: isError ? 'error' : 'success',
+        timer: 3000,
+        showConfirmButton: false,
+        customClass: {
+          popup: 'swal2-border-radius'
+        }
+      });
+    }
+
+    // 🎥 Start Stream (Admin)
+    async function startStream() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        stream.getTracks().forEach(t => t.stop());
+      } catch (e) {
+        showAlert("Please allow camera & microphone access.", true);
+        return;
+      }
+
+      const streamRef = doc(db, "streamControl", "activeStream");
+      const snap = await getDoc(streamRef);
+      if (snap.exists()) {
+        showAlert("A stream is already live!", true);
+        return;
+      }
+
+      Swal.fire({ title: "Starting stream...", didOpen: () => Swal.showLoading() });
+
+      try {
+        await setDoc(streamRef, {
+          hostUid: currentUser.uid,
+          hostEmail: currentUser.email,
+          startedAt: new Date().toISOString()
+        });
+
+        rtc.client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
+        await rtc.client.join(AGORA_APP_ID, AGORA_CHANNEL, null, null);
+        await rtc.client.setClientRole("host");
+
+        const videoTrack = await AgoraRTC.createCameraVideoTrack();
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        await rtc.client.publish([videoTrack, audioTrack]);
+
+        videoTrack.play(localPlayer);
+        localPlayer.style.display = "block";
+
+        startStreamBtn.style.display = "none";
+        stopStreamBtn.style.display = "inline-block";
+        viewersList.style.display = "block";
+        Swal.close();
+        showAlert("You're live! 🎥");
+
+      } catch (err) {
+        console.error("Start Stream Error:", err);
+        showAlert(err.message || "Failed to start stream", true);
+        await deleteDoc(doc(db, "streamControl", "activeStream"));
+      }
+    }
+
+    // 👀 Join Stream (Viewer)
+    async function joinStream() {
+      try {
+        rtc.client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
+        await rtc.client.join(AGORA_APP_ID, AGORA_CHANNEL, null, null);
+
+        rtc.client.on("user-published", async (user, mediaType) => {
+          await rtc.client.subscribe(user, mediaType);
+          if (mediaType === "video") {
+            user.videoTrack.play(remotePlayer);
+            remotePlayer.style.display = "block";
+            joinBtn.style.display = "none";
+            leaveWatchBtn.style.display = "inline-block";
+            noStreamMsg.style.display = "none";
+          }
+        });
+
+        rtc.client.on("user-unpublished", () => {
+          remotePlayer.style.display = "none";
+          joinBtn.style.display = "inline-block";
+          leaveWatchBtn.style.display = "none";
+          noStreamMsg.style.display = "block";
+        });
+
+      } catch (err) {
+        console.error("Join Error:", err);
+        showAlert("No active stream available.", true);
+        noStreamMsg.style.display = "block";
+      }
+    }
+
+    // 🛑 Stop Stream (Admin)
+    async function stopStream() {
+      if (rtc.client) {
+        await rtc.client.leave();
+        rtc.client = null;
+      }
+      localPlayer.style.display = "none";
+      startStreamBtn.style.display = "inline-block";
+      stopStreamBtn.style.display = "none";
+      viewersList.style.display = "none";
+      viewersItems.innerHTML = "";
+      await deleteDoc(doc(db, "streamControl", "activeStream"));
+      showAlert("Stream ended.");
+    }
+
+    // 🛑 Leave as Viewer
+    async function leaveAsViewer() {
+      if (rtc.client) {
+        await rtc.client.leave();
+        rtc.client = null;
+      }
+      remotePlayer.style.display = "none";
+      joinBtn.style.display = "inline-block";
+      leaveWatchBtn.style.display = "none";
+      noStreamMsg.style.display = "block";
+    }
+
+    // 👁️ Update viewer list (Admin only)
+    function updateViewersList() {
+      if (currentUser?.email !== ADMIN_EMAIL) return;
+      
+      const items = Array.from(rtc.remoteUsers.values()).map(uid => {
+        const userDiv = document.createElement('div');
+        userDiv.className = 'viewer-item';
+        userDiv.textContent = `Viewer (${uid.substring(0, 8)}...)`;
+        return userDiv;
+      });
+
+      viewersItems.innerHTML = '';
+      if (items.length === 0) {
+        viewersItems.innerHTML = '<div class="viewer-item">No viewers yet</div>';
+      } else {
+        items.forEach(item => viewersItems.appendChild(item));
+      }
+    }
+
+    // 🔁 Listen to stream state
+    onSnapshot(doc(db, "streamControl", "activeStream"), (snap) => {
+      if (snap.exists()) {
+        noStreamMsg.style.display = "none";
+        if (currentUser?.email === ADMIN_EMAIL) {
+          goLiveTab.style.display = "block";
+        }
+      } else {
+        noStreamMsg.style.display = "block";
+        remotePlayer.style.display = "none";
+        joinBtn.style.display = "inline-block";
+        leaveWatchBtn.style.display = "none";
+      }
+    });
+
+    // 🔐 Auth
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        if (user.email === ADMIN_EMAIL) {
+          goLiveTab.style.display = "block";
+        } else {
+          goLiveTab.style.display = "none";
+        }
+      } else {
+        window.location.href = "login.html";
+      }
+    });
+
+    // Agora client events for viewer tracking (admin only)
+    if (typeof AgoraRTC !== 'undefined') {
+      // We'll set up client events when stream starts
+    }
+
+    // 🖱️ Events
+    startStreamBtn.addEventListener("click", startStream);
+    stopStreamBtn.addEventListener("click", stopStream);
+    joinBtn.addEventListener("click", joinStream);
+    leaveWatchBtn.addEventListener("click", leaveAsViewer);
+
+    // Initialize Agora client with viewer tracking (for admin)
+    function initAgoraWithViewers() {
+      if (!rtc.client) return;
+
+      rtc.client.on("user-joined", (user) => {
+        rtc.remoteUsers.set(user.uid, user.uid);
+        updateViewersList();
+      });
+
+      rtc.client.on("user-left", (user) => {
+        rtc.remoteUsers.delete(user.uid);
+        updateViewersList();
+      });
+    }
+
+    // Override joinStream and startStream to include viewer tracking
+    const originalStartStream = startStream;
+    startStream = async () => {
+      await originalStartStream();
+      if (rtc.client) initAgoraWithViewers();
+    };
+
+    const originalJoinStream = joinStream;
+    joinStream = async () => {
+      await originalJoinStream();
+      if (rtc.client && currentUser?.email === ADMIN_EMAIL) {
+        initAgoraWithViewers();
+      }
+    };
+  </script>
+</body>
+</html>

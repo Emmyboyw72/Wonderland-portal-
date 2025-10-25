@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Messenger – Wonderland</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: white;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      background: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      z-index: 100;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .back-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #f1f1f1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .peer-name {
+      font-size: 18px;
+      font-weight: bold;
+      color: #e50914;
+    }
+
+    .header-icons {
+      display: flex;
+      gap: 16px;
+    }
+
+    .header-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #f1f1f1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e50914;
+      cursor: pointer;
+    }
+
+    .chat-container {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      font-size: 16px;
+      line-height: 1.4;
+      position: relative;
+      word-break: break-word;
+    }
+
+    .message.received {
+      background: #f1f1f1;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message.sent {
+      background: #ffebee;
+      color: #c62828;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-time {
+      font-size: 11px;
+      color: #888;
+      text-align: right;
+      margin-top: 4px;
+    }
+
+    .input-area {
+      display: flex;
+      padding: 12px;
+      background: white;
+      border-top: 1px solid #eee;
+      gap: 12px;
+    }
+
+    .attach-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #f1f1f1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #e50914;
+    }
+
+    .message-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #ddd;
+      border-radius: 24px;
+      font-size: 16px;
+    }
+
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #e50914;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <div class="back-btn" onclick="goBack()">
+        <i class="fas fa-arrow-left"></i>
+      </div>
+      <div class="peer-name" id="peerName">Loading...</div>
+    </div>
+    <div class="header-icons">
+      <div class="header-icon" onclick="showNotAvailable('Call')">
+        <i class="fas fa-phone"></i>
+      </div>
+      <div class="header-icon" onclick="showNotAvailable('Video')">
+        <i class="fas fa-video"></i>
+      </div>
+    </div>
+  </header>
+
+  <div class="chat-container" id="chatContainer">
+    <!-- Messages appear here -->
+  </div>
+
+  <div class="input-area">
+    <div class="attach-btn" onclick="showNotAvailable('Image upload')">
+      <i class="fas fa-plus"></i>
+    </div>
+    <input type="text" class="message-input" id="messageInput" placeholder="Type a message..." />
+    <div class="send-btn" onclick="sendMessage()">
+      <i class="fas fa-paper-plane"></i>
+    </div>
+  </div>
+
+  <script type="module">
+    // ✅ FIXED: NO TRAILING SPACES
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let roomId = null;
+    let peerUid = null;
+    let peerName = null;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    roomId = urlParams.get('roomId');
+    peerUid = urlParams.get('peerUid');
+    peerName = decodeURIComponent(urlParams.get('peerName') || 'User');
+
+    if (!roomId || !peerUid) {
+      Swal.fire('Error', 'Invalid chat link.', 'error').then(() => {
+        window.location.href = 'friends.html';
+      });
+    }
+
+    document.getElementById('peerName').textContent = peerName;
+
+    function goBack() {
+      window.history.back();
+    }
+
+    function showNotAvailable(feature) {
+      Swal.fire({
+        title: `${feature} not available`,
+        text: `This feature is not available now.`,
+        icon: 'info',
+        confirmButtonText: 'OK'
+      });
+    }
+
+    function formatTime(firestoreTimestamp) {
+      if (!firestoreTimestamp?.toDate) return '—';
+      const date = firestoreTimestamp.toDate();
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = diffMs / (1000 * 60);
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return Math.floor(diffMins) + 'm';
+      const diffHrs = diffMins / 60;
+      if (diffHrs < 24) return Math.floor(diffHrs) + 'h';
+      return date.toLocaleDateString();
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      try {
+        const roomRef = doc(db, 'chats', roomId);
+        const roomSnap = await getDoc(roomRef);
+
+        const newMessage = {
+          text: text,
+          senderId: currentUser.uid,
+          timestamp: serverTimestamp(),
+          [`read_${currentUser.uid}`]: true // sender has read it
+          // read_{peerUid} will be false by default (not set)
+        };
+
+        if (!roomSnap.exists()) {
+          // Create chat room
+          await updateDoc(roomRef, {
+            participants: [currentUser.uid, peerUid],
+            messages: [newMessage]
+          });
+        } else {
+          // Append to existing messages
+          const currentMessages = roomSnap.data().messages || [];
+          currentMessages.push(newMessage);
+          await updateDoc(roomRef, {
+            participants: arrayUnion(currentUser.uid, peerUid),
+            messages: currentMessages
+          });
+        }
+
+        input.value = '';
+        scrollToBottom();
+      } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Failed to send message.', 'error');
+      }
+    }
+
+    function renderMessages(messages) {
+      const container = document.getElementById('chatContainer');
+      container.innerHTML = '';
+
+      messages.forEach(msg => {
+        const isSent = msg.senderId === currentUser.uid;
+        const messageEl = document.createElement('div');
+        messageEl.className = `message ${isSent ? 'sent' : 'received'}`;
+        messageEl.innerHTML = `
+          ${msg.text}
+          <div class="message-time">${formatTime(msg.timestamp)}</div>
+        `;
+        container.appendChild(messageEl);
+      });
+
+      scrollToBottom();
+    }
+
+    function scrollToBottom() {
+      const container = document.getElementById('chatContainer');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // Real-time listener on chat doc
+    function setupMessageListener() {
+      const roomRef = doc(db, 'chats', roomId);
+
+      // Initial load
+      getDoc(roomRef).then((docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          renderMessages(data.messages || []);
+        }
+      });
+
+      // Listen for updates
+      const unsubscribe = onSnapshot(roomRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          renderMessages(data.messages || []);
+        }
+      });
+
+      // Return unsubscribe for cleanup (optional)
+    }
+
+    // Auth state
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        setupMessageListener();
+      } else {
+        window.location.href = 'login.html';
+      }
+    });
+
+    // Enter to send
+    document.getElementById('messageInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>

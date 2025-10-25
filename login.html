@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login - Wonderland</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      background: #fff;
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      border: 2px solid red;
+    }
+
+    h2 {
+      text-align: center;
+      color: red;
+      margin-bottom: 24px;
+      font-size: 26px;
+    }
+
+    .input-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #333;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: red;
+    }
+
+    .options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .remember {
+      display: flex;
+      align-items: center;
+    }
+
+    .remember input {
+      margin-right: 6px;
+    }
+
+    .forgot {
+      color: red;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .btn:hover {
+      background: #cc0000;
+    }
+
+    .btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .signup-link {
+      text-align: center;
+      margin-top: 20px;
+      color: #555;
+    }
+
+    .signup-link a {
+      color: red;
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h2>Welcome Back</h2>
+    <form id="loginForm">
+      <div class="input-group">
+        <label for="email">Gmail</label>
+        <input type="email" id="email" placeholder="your.email@gmail.com" required />
+      </div>
+
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter your password" required />
+      </div>
+
+      <div class="options">
+        <div class="remember">
+          <input type="checkbox" id="remember" />
+          <label for="remember">Remember me</label>
+        </div>
+        <a href="#" class="forgot" id="forgotLink">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="btn" id="loginBtn">Log In</button>
+    </form>
+
+    <div class="signup-link">
+      Don’t have an account? <a href="signup.html">Sign Up</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('loginBtn');
+
+      if (!email || !email.includes('@gmail.com')) {
+        Swal.fire('Invalid Email', 'Please enter a valid Gmail address.', 'warning');
+        return;
+      }
+
+      if (password.length < 6) {
+        Swal.fire('Invalid Password', 'Password must be at least 6 characters.', 'warning');
+        return;
+      }
+
+      // Show loading alert
+      Swal.fire({
+        title: 'Logging in...',
+        html: 'Please wait while we verify your credentials.',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        Swal.close();
+        Swal.fire({
+          title: 'Success!',
+          text: 'You are now logged in.',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        }).then(() => {
+          window.location.href = 'dashboard.html';
+        });
+      } catch (error) {
+        Swal.close();
+        let message = 'Login failed. Please check your credentials.';
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+          message = 'Incorrect email or password.';
+        } else if (error.code === 'auth/too-many-requests') {
+          message = 'Too many failed attempts. Try again later.';
+        }
+        Swal.fire('Login Error', message, 'error');
+      }
+    });
+
+    // Forgot password handler
+    document.getElementById('forgotLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      Swal.fire({
+        title: 'Reset Password',
+        text: 'Enter your Gmail to receive a password reset link:',
+        input: 'email',
+        inputPlaceholder: 'your.email@gmail.com',
+        inputAttributes: {
+          autocapitalize: 'off'
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Send Reset Link',
+        cancelButtonText: 'Cancel',
+        preConfirm: (email) => {
+          if (!email || !email.includes('@gmail.com')) {
+            Swal.showValidationMessage('Please enter a valid Gmail address');
+          }
+          return email;
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Swal.fire({
+            title: 'Sending...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+          });
+          sendPasswordResetEmail(auth, result.value)
+            .then(() => {
+              Swal.close();
+              Swal.fire('Success!', 'Password reset email sent. Check your inbox.', 'success');
+            })
+            .catch(() => {
+              Swal.close();
+              Swal.fire('Error', 'Failed to send reset email. Try again.', 'error');
+            });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

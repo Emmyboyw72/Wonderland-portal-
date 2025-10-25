@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Market – Wonderland</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: white;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding-bottom: 70px;
+    }
+
+    .content {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .message {
+      font-size: 20px;
+      color: #e50914;
+      font-weight: bold;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+
+    .footer-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #888;
+      font-size: 12px;
+      text-decoration: none;
+    }
+
+    .footer-btn.active {
+      color: #e50914;
+      font-weight: bold;
+    }
+
+    .footer-btn i {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="content">
+    <div class="message">This feature is not available</div>
+  </div>
+
+  <footer>
+    <a href="dashboard.html" class="footer-btn">
+      <i class="fas fa-home"></i> Home
+    </a>
+    <a href="friends.html" class="footer-btn">
+      <i class="fas fa-users"></i> Friends
+    </a>
+    <a href="market.html" class="footer-btn active">
+      <i class="fas fa-shopping-bag"></i> Market
+    </a>
+    <a href="notifications.html" class="footer-btn">
+      <i class="fas fa-bell"></i> Alerts
+    </a>
+  </footer>
+
+</body>
+</html>
