@@ -154,7 +154,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
@@ -173,7 +173,6 @@
 
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
-      const btn = document.getElementById('loginBtn');
 
       if (!email || !email.includes('@gmail.com')) {
         Swal.fire('Invalid Email', 'Please enter a valid Gmail address.', 'warning');
@@ -185,19 +184,42 @@
         return;
       }
 
-      // Show loading alert
       Swal.fire({
         title: 'Logging in...',
-        html: 'Please wait while we verify your credentials.',
+        html: 'Verifying your account status...',
         allowOutsideClick: false,
         allowEscapeKey: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
+        didOpen: () => Swal.showLoading()
       });
 
       try {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // 🔒 Check if email is verified
+        if (!user.emailVerified) {
+          Swal.close();
+          Swal.fire({
+            title: 'Email Not Verified',
+            html: `Please verify your email address.<br>We can <strong>resend the verification link</strong> to <strong>${email}</strong>.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Resend Verification Email',
+            cancelButtonText: 'Cancel'
+          }).then(async (result) => {
+            if (result.isConfirmed) {
+              try {
+                await sendEmailVerification(user);
+                Swal.fire('Sent!', 'Verification email resent. Please check your inbox.', 'success');
+              } catch (err) {
+                Swal.fire('Error', 'Failed to resend verification email. Please try again.', 'error');
+              }
+            }
+          });
+          return;
+        }
+
+        // ✅ Verified: proceed to dashboard
         Swal.close();
         Swal.fire({
           title: 'Success!',
@@ -208,6 +230,7 @@
         }).then(() => {
           window.location.href = 'dashboard.html';
         });
+
       } catch (error) {
         Swal.close();
         let message = 'Login failed. Please check your credentials.';

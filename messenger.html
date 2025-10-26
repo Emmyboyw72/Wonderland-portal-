@@ -1,356 +1,405 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Messenger – Wonderland</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', sans-serif;
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat – wöndèlånd</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
 
-    body {
-      background: white;
-      color: #333;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
+        body {
+            background: #f0f2f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
 
-    header {
-      background: white;
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      z-index: 100;
-    }
+        header {
+            background: white;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+        .back-btn {
+            margin-right: 12px;
+            color: #e50914;
+            font-size: 20px;
+            cursor: pointer;
+        }
 
-    .back-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: #f1f1f1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
+        .chat-header {
+            flex: 1;
+        }
 
-    .peer-name {
-      font-size: 18px;
-      font-weight: bold;
-      color: #e50914;
-    }
+        .peer-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 18px;
+        }
 
-    .header-icons {
-      display: flex;
-      gap: 16px;
-    }
+        .typing-indicator {
+            font-size: 13px;
+            color: #888;
+            margin-top: 2px;
+        }
 
-    .header-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: #f1f1f1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #e50914;
-      cursor: pointer;
-    }
+        .call-buttons {
+            display: flex;
+            gap: 12px;
+        }
 
-    .chat-container {
-      flex: 1;
-      padding: 16px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
+        .call-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #f0f2f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e50914;
+            cursor: pointer;
+        }
 
-    .message {
-      max-width: 70%;
-      padding: 12px 16px;
-      border-radius: 18px;
-      font-size: 16px;
-      line-height: 1.4;
-      position: relative;
-      word-break: break-word;
-    }
+        .messages-container {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
 
-    .message.received {
-      background: #f1f1f1;
-      align-self: flex-start;
-      border-bottom-left-radius: 4px;
-    }
+        .message {
+            max-width: 70%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            position: relative;
+            word-break: break-word;
+        }
 
-    .message.sent {
-      background: #ffebee;
-      color: #c62828;
-      align-self: flex-end;
-      border-bottom-right-radius: 4px;
-    }
+        .sent {
+            background: #dcf8c6;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
 
-    .message-time {
-      font-size: 11px;
-      color: #888;
-      text-align: right;
-      margin-top: 4px;
-    }
+        .received {
+            background: white;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
 
-    .input-area {
-      display: flex;
-      padding: 12px;
-      background: white;
-      border-top: 1px solid #eee;
-      gap: 12px;
-    }
+        .message-time {
+            font-size: 10px;
+            color: #999;
+            text-align: right;
+            margin-top: 4px;
+        }
 
-    .attach-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: #f1f1f1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      color: #e50914;
-    }
+        .seen-indicator {
+            color: #e50914;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 4px;
+        }
 
-    .message-input {
-      flex: 1;
-      padding: 12px 16px;
-      border: 1px solid #ddd;
-      border-radius: 24px;
-      font-size: 16px;
-    }
+        .input-area {
+            display: flex;
+            padding: 8px 12px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
 
-    .send-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: #e50914;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-  </style>
+        #messageInput {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            padding: 10px;
+            background: #f0f2f5;
+            border-radius: 20px;
+        }
+
+        #sendBtn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #e50914;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+
+        .alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            padding: 20px 24px;
+            border-radius: 16px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            opacity: 0;
+            transition: opacity 0.3s;
+            text-align: center;
+            max-width: 90%;
+            font-size: 16px;
+        }
+
+        .alert.show {
+            opacity: 1;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #00c853, #007e33);
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+        }
+    </style>
 </head>
 <body>
 
-  <header>
-    <div class="header-left">
-      <div class="back-btn" onclick="goBack()">
-        <i class="fas fa-arrow-left"></i>
-      </div>
-      <div class="peer-name" id="peerName">Loading...</div>
+    <header>
+        <div class="back-btn" onclick="window.history.back()">
+            <i class="fas fa-arrow-left"></i>
+        </div>
+        <div class="chat-header">
+            <div class="peer-name" id="peerName">Loading...</div>
+            <div class="typing-indicator" id="typingIndicator" style="display:none;">Typing...</div>
+        </div>
+        <div class="call-buttons">
+            <div class="call-btn" onclick="startAudioCall()">
+                <i class="fas fa-phone"></i>
+            </div>
+            <div class="call-btn" onclick="startVideoCall()">
+                <i class="fas fa-video"></i>
+            </div>
+        </div>
+    </header>
+
+    <div class="messages-container" id="messagesContainer">
+        <!-- Messages loaded here -->
     </div>
-    <div class="header-icons">
-      <div class="header-icon" onclick="showNotAvailable('Call')">
-        <i class="fas fa-phone"></i>
-      </div>
-      <div class="header-icon" onclick="showNotAvailable('Video')">
-        <i class="fas fa-video"></i>
-      </div>
+
+    <div class="input-area">
+        <input type="text" id="messageInput" placeholder="Type a message" />
+        <div id="sendBtn" onclick="sendMessage()">
+            <i class="fas fa-paper-plane"></i>
+        </div>
     </div>
-  </header>
 
-  <div class="chat-container" id="chatContainer">
-    <!-- Messages appear here -->
-  </div>
-
-  <div class="input-area">
-    <div class="attach-btn" onclick="showNotAvailable('Image upload')">
-      <i class="fas fa-plus"></i>
+    <div id="alert" class="alert">
+        <span id="alert-message">Message sent!</span>
     </div>
-    <input type="text" class="message-input" id="messageInput" placeholder="Type a message..." />
-    <div class="send-btn" onclick="sendMessage()">
-      <i class="fas fa-paper-plane"></i>
-    </div>
-  </div>
 
-  <script type="module">
-    // ✅ FIXED: NO TRAILING SPACES
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, getDoc, updateDoc, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            addDoc, 
+            serverTimestamp, 
+            onSnapshot,
+            updateDoc,
+            query,
+            orderBy,
+            where,
+            arrayUnion
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
-      authDomain: "emmy-programmers.firebaseapp.com",
-      projectId: "emmy-programmers",
-      storageBucket: "emmy-programmers.firebasestorage.app",
-      messagingSenderId: "351752440867",
-      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let currentUser = null;
-    let roomId = null;
-    let peerUid = null;
-    let peerName = null;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    roomId = urlParams.get('roomId');
-    peerUid = urlParams.get('peerUid');
-    peerName = decodeURIComponent(urlParams.get('peerName') || 'User');
-
-    if (!roomId || !peerUid) {
-      Swal.fire('Error', 'Invalid chat link.', 'error').then(() => {
-        window.location.href = 'friends.html';
-      });
-    }
-
-    document.getElementById('peerName').textContent = peerName;
-
-    function goBack() {
-      window.history.back();
-    }
-
-    function showNotAvailable(feature) {
-      Swal.fire({
-        title: `${feature} not available`,
-        text: `This feature is not available now.`,
-        icon: 'info',
-        confirmButtonText: 'OK'
-      });
-    }
-
-    function formatTime(firestoreTimestamp) {
-      if (!firestoreTimestamp?.toDate) return '—';
-      const date = firestoreTimestamp.toDate();
-      const now = new Date();
-      const diffMs = now - date;
-      const diffMins = diffMs / (1000 * 60);
-      if (diffMins < 1) return 'Just now';
-      if (diffMins < 60) return Math.floor(diffMins) + 'm';
-      const diffHrs = diffMins / 60;
-      if (diffHrs < 24) return Math.floor(diffHrs) + 'h';
-      return date.toLocaleDateString();
-    }
-
-    async function sendMessage() {
-      const input = document.getElementById('messageInput');
-      const text = input.value.trim();
-      if (!text) return;
-
-      try {
-        const roomRef = doc(db, 'chats', roomId);
-        const roomSnap = await getDoc(roomRef);
-
-        const newMessage = {
-          text: text,
-          senderId: currentUser.uid,
-          timestamp: serverTimestamp(),
-          [`read_${currentUser.uid}`]: true // sender has read it
-          // read_{peerUid} will be false by default (not set)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+            authDomain: "emmy-programmers.firebaseapp.com",
+            projectId: "emmy-programmers",
+            storageBucket: "emmy-programmers.firebasestorage.app",
+            messagingSenderId: "351752440867",
+            appId: "1:351752440867:web:1f65d8c922d3d48e063596"
         };
 
-        if (!roomSnap.exists()) {
-          // Create chat room
-          await updateDoc(roomRef, {
-            participants: [currentUser.uid, peerUid],
-            messages: [newMessage]
-          });
-        } else {
-          // Append to existing messages
-          const currentMessages = roomSnap.data().messages || [];
-          currentMessages.push(newMessage);
-          await updateDoc(roomRef, {
-            participants: arrayUnion(currentUser.uid, peerUid),
-            messages: currentMessages
-          });
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let peerId = null;
+        let peerName = null;
+        let chatId = null;
+
+        function showAlert(message, isError = false) {
+            const alertEl = document.getElementById('alert');
+            alertEl.textContent = message;
+            alertEl.className = `alert ${isError ? 'alert-error' : 'alert-success'} show`;
+            setTimeout(() => alertEl.classList.remove('show'), 4000);
         }
 
-        input.value = '';
-        scrollToBottom();
-      } catch (err) {
-        console.error(err);
-        Swal.fire('Error', 'Failed to send message.', 'error');
-      }
-    }
-
-    function renderMessages(messages) {
-      const container = document.getElementById('chatContainer');
-      container.innerHTML = '';
-
-      messages.forEach(msg => {
-        const isSent = msg.senderId === currentUser.uid;
-        const messageEl = document.createElement('div');
-        messageEl.className = `message ${isSent ? 'sent' : 'received'}`;
-        messageEl.innerHTML = `
-          ${msg.text}
-          <div class="message-time">${formatTime(msg.timestamp)}</div>
-        `;
-        container.appendChild(messageEl);
-      });
-
-      scrollToBottom();
-    }
-
-    function scrollToBottom() {
-      const container = document.getElementById('chatContainer');
-      container.scrollTop = container.scrollHeight;
-    }
-
-    // Real-time listener on chat doc
-    function setupMessageListener() {
-      const roomRef = doc(db, 'chats', roomId);
-
-      // Initial load
-      getDoc(roomRef).then((docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          renderMessages(data.messages || []);
+        function formatTime(timestamp) {
+            if (!timestamp?.toDate) return '';
+            const date = timestamp.toDate();
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
-      });
 
-      // Listen for updates
-      const unsubscribe = onSnapshot(roomRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          renderMessages(data.messages || []);
+        // Ensure friend exists (auto-add if not)
+        async function ensureFriendExists(peerId, peerEmail) {
+            const friendRef = doc(db, 'friends', currentUser.uid, 'list', peerId);
+            const friendSnap = await getDoc(friendRef);
+            if (!friendSnap.exists()) {
+                // Add to friends
+                await setDoc(friendRef, {
+                    userId: peerId,
+                    email: peerEmail,
+                    username: peerEmail.split('@')[0],
+                    addedAt: serverTimestamp()
+                });
+                // Also add reverse (optional)
+                await setDoc(doc(db, 'friends', peerId, 'list', currentUser.uid), {
+                    userId: currentUser.uid,
+                    email: currentUser.email,
+                    username: currentUser.email.split('@')[0],
+                    addedAt: serverTimestamp()
+                });
+            }
         }
-      });
 
-      // Return unsubscribe for cleanup (optional)
-    }
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text) return;
 
-    // Auth state
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        currentUser = user;
-        setupMessageListener();
-      } else {
-        window.location.href = 'login.html';
-      }
-    });
+            try {
+                await addDoc(collection(db, 'chats', chatId, 'messages'), {
+                    text: text,
+                    sender: currentUser.uid,
+                    timestamp: serverTimestamp(),
+                    seenBy: [] // will be updated when read
+                });
+                input.value = '';
+            } catch (err) {
+                console.error("Send error:", err);
+                showAlert("Failed to send.", true);
+            }
+        }
 
-    // Enter to send
-    document.getElementById('messageInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        sendMessage();
-      }
-    });
-  </script>
+        function startAudioCall() {
+            window.location.href = `audio-call.html?peer=${peerId}&name=${encodeURIComponent(peerName)}`;
+        }
+
+        function startVideoCall() {
+            window.location.href = `video-call.html?peer=${peerId}&name=${encodeURIComponent(peerName)}`;
+        }
+
+        function renderMessage(msg, isSent) {
+            const msgEl = document.createElement('div');
+            msgEl.className = `message ${isSent ? 'sent' : 'received'}`;
+            msgEl.innerHTML = `
+                ${msg.text}
+                <div class="message-time">
+                    ${formatTime(msg.timestamp)}
+                    ${!isSent && msg.seenBy?.includes(currentUser.uid) ? '<span class="seen-indicator">✓✓</span>' : ''}
+                </div>
+            `;
+            return msgEl;
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function loadMessages() {
+            const messagesRef = collection(db, 'chats', chatId, 'messages');
+            const q = query(messagesRef, orderBy('timestamp', 'asc'));
+            onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('messagesContainer');
+                container.innerHTML = '';
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === "added") {
+                        const msg = change.doc.data();
+                        const isSent = msg.sender === currentUser.uid;
+                        container.appendChild(renderMessage(msg, isSent));
+                    }
+                });
+                scrollToBottom();
+
+                // Mark last received messages as seen
+                const lastReceived = snapshot.docs
+                    .filter(d => d.data().sender !== currentUser.uid && !d.data().seenBy?.includes(currentUser.uid))
+                    .pop();
+                if (lastReceived) {
+                    updateDoc(doc(db, 'chats', chatId, 'messages', lastReceived.id), {
+                        seenBy: arrayUnion(currentUser.uid)
+                    });
+                }
+            });
+        }
+
+        // Parse URL params
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            currentUser = user;
+            peerId = getUrlParam('peer');
+            peerName = getUrlParam('name') || peerId;
+
+            if (!peerId) {
+                showAlert("Invalid chat.", true);
+                setTimeout(() => window.history.back(), 2000);
+                return;
+            }
+
+            document.getElementById('peerName').textContent = peerName;
+
+            // Auto-add if not friend
+            await ensureFriendExists(peerId, peerId);
+
+            // Create chat ID (sorted)
+            const ids = [currentUser.uid, peerId].sort();
+            chatId = ids.join('_');
+
+            // Ensure chat doc exists (optional)
+            await setDoc(doc(db, 'chats', chatId), {
+                participants: ids,
+                createdAt: serverTimestamp()
+            }, { merge: true });
+
+            loadMessages();
+        });
+
+        // Send on Enter
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
 </body>
 </html>

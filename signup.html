@@ -27,11 +27,11 @@
       padding: 32px;
       border-radius: 12px;
       box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-      border: 2px solid #ff0000;
+      border: 2px solid #e50914;
     }
     h2 {
       text-align: center;
-      color: red;
+      color: #e50914;
       margin-bottom: 24px;
       font-size: 26px;
     }
@@ -54,7 +54,7 @@
     }
     input:focus {
       outline: none;
-      border-color: red;
+      border-color: #e50914;
     }
     .checkbox-group {
       display: flex;
@@ -72,13 +72,13 @@
       font-size: 14px;
     }
     .checkbox-group a {
-      color: red;
+      color: #e50914;
       text-decoration: none;
     }
     .btn {
       width: 100%;
       padding: 14px;
-      background: red;
+      background: #e50914;
       color: white;
       border: none;
       border-radius: 6px;
@@ -88,7 +88,7 @@
       transition: background 0.3s;
     }
     .btn:hover {
-      background: #cc0000;
+      background: #c20817;
     }
     .btn:disabled {
       opacity: 0.7;
@@ -100,7 +100,7 @@
       color: #555;
     }
     .login-link a {
-      color: red;
+      color: #e50914;
       text-decoration: none;
       font-weight: bold;
     }
@@ -120,7 +120,7 @@
       </div>
       <div class="input-group">
         <label for="phone">Phone Number</label>
-        <input type="tel" id="phone" placeholder="e.g. +1234567890" required />
+        <input type="tel" id="phone" placeholder="e.g. 08124890070" required />
       </div>
       <div class="input-group">
         <label for="class">Class</label>
@@ -159,23 +159,36 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
+    // 🔒 DEVICE LOCK: Check if already signed up on this device
+    if (localStorage.getItem('wonderland_device_registered')) {
+      Swal.fire({
+        title: 'Account Already Created',
+        html: 'Only one account is allowed per device.<br>You can log in or use another device.',
+        icon: 'info',
+        confirmButtonText: 'Go to Login'
+      }).then(() => {
+        window.location.href = 'login.html';
+      });
+      // Hide form to prevent interaction
+      document.getElementById('signupForm').style.display = 'none';
+    }
+
     document.getElementById('signupForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const username = document.getElementById('username').value.trim();
-      const email = document.getElementById('email').value.trim();
+      const email = document.getElementById('email').value.trim().toLowerCase();
       const phone = document.getElementById('phone').value.trim();
       const userClass = document.getElementById('class').value.trim();
       const password = document.getElementById('password').value;
       const terms = document.getElementById('terms').checked;
-      const btn = document.getElementById('signupBtn');
 
       // Validation
       if (!username || username.length < 3) {
         Swal.fire('Oops!', 'Username must be at least 3 characters.', 'warning');
         return;
       }
-      if (!email.includes('@gmail.com')) {
+      if (!email.endsWith('@gmail.com')) {
         Swal.fire('Oops!', 'Please use a valid Gmail address.', 'warning');
         return;
       }
@@ -192,26 +205,26 @@
         return;
       }
 
-      // Show "Signing up..." alert
       Swal.fire({
-        title: 'Signing up...',
-        html: 'Please wait while we create your account.',
+        title: 'Creating Account...',
+        html: 'Setting up your profile.',
         allowOutsideClick: false,
         allowEscapeKey: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
+        didOpen: () => Swal.showLoading()
       });
 
       try {
-        // Create auth user
+        // Step 1: Create user in Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Save to Firestore
-        const { getFirestore, doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        // Step 2: Save profile to Firestore under EMAIL (not UID)
+        const { getFirestore, doc, setDoc, collection } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
         const db = getFirestore(app);
-        await setDoc(doc(db, "users", user.uid), {
+
+        // Save user data
+        await setDoc(doc(db, "users", email), {
+          uid: user.uid,
           username: username,
           email: email,
           phone: phone,
@@ -219,15 +232,23 @@
           createdAt: new Date().toISOString()
         });
 
-        // Close loading, show success
+        // Create empty friends list
+        await setDoc(doc(db, "friends", email, "meta", "info"), {
+          initialized: true
+        });
+
+        // 🔒 Mark this device as registered
+        localStorage.setItem('wonderland_device_registered', 'true');
+        localStorage.setItem('wonderland_user_email', email);
+
         Swal.close();
         Swal.fire({
           title: 'Success!',
-          text: 'Your account has been created successfully!',
+          html: `Welcome, <strong>${username}</strong>!<br>Your account is ready.`,
           icon: 'success',
-          confirmButtonText: 'Go to Login'
+          confirmButtonText: 'Go to Dashboard'
         }).then(() => {
-          window.location.href = 'login.html';
+          window.location.href = 'dashboard.html';
         });
 
       } catch (error) {
@@ -239,8 +260,6 @@
           message = 'Invalid email address.';
         } else if (error.code === 'auth/weak-password') {
           message = 'Password is too weak. Use at least 6 characters.';
-        } else if (error.code === 'permission-denied' || error.code === 'unavailable') {
-          message = 'Unable to save profile. Please check your internet connection.';
         }
         Swal.fire('Sign Up Failed', message, 'error');
       }

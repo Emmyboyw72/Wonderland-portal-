@@ -1,632 +1,899 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard – Wonderland</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard – wöndèlånd</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
 
-    body {
-      background: #fff9f9;
-      color: #333;
-      padding-bottom: 70px;
-    }
+        body {
+            background: #fff9f9;
+            color: #333;
+            padding-bottom: 70px;
+        }
 
-    header {
-      background: white;
-      padding: 12px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
+        header {
+            background: white;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
 
-    .header-title {
-      font-size: 20px;
-      font-weight: bold;
-      color: #e50914;
-    }
+        .header-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #e50914;
+        }
 
-    .profile-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #ffeaa7;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: #e50914;
-    }
+        .profile-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ffeaa7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #e50914;
+        }
 
-    #postBtn {
-      position: fixed;
-      bottom: 80px;
-      right: 20px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: #e50914;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
-      font-size: 24px;
-      cursor: pointer;
-      z-index: 90;
-      display: none; /* Hidden by default */
-    }
+        #postBtn {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #e50914;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 90;
+        }
 
-    .feed {
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 24px;
-    }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding: 12px 0;
+            background: white;
+            border-bottom: 1px solid #eee;
+        }
 
-    .post-container {
-      width: 100%;
-      max-width: 500px;
-    }
+        .tab {
+            padding: 8px 16px;
+            font-weight: bold;
+            color: #888;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
 
-    .post {
-      background: white;
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      border: 1px solid #f0f0f0;
-      position: relative;
-    }
+        .tab.active {
+            color: #e50914;
+            border-bottom: 2px solid #e50914;
+        }
 
-    .delete-btn {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: rgba(229, 9, 20, 0.8);
-      color: white;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
+        .tab-content {
+            display: none;
+        }
 
-    .post:hover .delete-btn {
-      opacity: 1;
-    }
+        .tab-content.active {
+            display: block;
+        }
 
-    .post-image {
-      width: 100%;
-      height: 220px;
-      object-fit: cover;
-    }
+        .feed, .live-feed {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
 
-    .post-body {
-      padding: 16px;
-    }
+        .post-container {
+            width: 100%;
+            max-width: 500px;
+        }
 
-    .post-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 12px;
-    }
+        .post {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid #f0f0f0;
+            position: relative;
+        }
 
-    .post-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #fab1a0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: bold;
-      margin-right: 12px;
-      flex-shrink: 0;
-    }
+        .delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(229, 9, 20, 0.8);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
 
-    .post-info {
-      flex: 1;
-    }
+        .post:hover .delete-btn {
+            opacity: 1;
+        }
 
-    .post-username {
-      font-weight: bold;
-      color: #e50914;
-      font-size: 16px;
-    }
+        .post-image {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+        }
 
-    .post-time {
-      font-size: 12px;
-      color: #888;
-    }
+        .post-body {
+            padding: 16px;
+        }
 
-    .post-content {
-      margin: 12px 0;
-      line-height: 1.6;
-      font-size: 16px;
-      text-align: center;
-      word-break: break-word;
-    }
+        .post-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
 
-    .stats {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      margin: 12px 0;
-    }
+        .post-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #fab1a0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
 
-    .stat-badge {
-      background: #ffebee;
-      color: #c62828;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-weight: bold;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
+        .post-info {
+            flex: 1;
+        }
 
-    .post-actions {
-      display: flex;
-      justify-content: center;
-      gap: 24px;
-      margin-top: 12px;
-    }
+        .post-username {
+            font-weight: bold;
+            color: #e50914;
+            font-size: 16px;
+        }
 
-    .action-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: #555;
-      cursor: pointer;
-      font-size: 14px;
-    }
+        .post-time {
+            font-size: 12px;
+            color: #888;
+        }
 
-    .action-btn.liked i {
-      color: #e50914 !important;
-    }
+        .post-content {
+            margin: 12px 0;
+            line-height: 1.6;
+            font-size: 16px;
+            text-align: center;
+            word-break: break-word;
+            overflow: hidden;
+        }
 
-    .empty-feed {
-      text-align: center;
-      color: #888;
-      font-size: 18px;
-      margin-top: 40px;
-    }
+        .post-content.collapsed {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            height: auto;
+        }
 
-    footer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: white;
-      display: flex;
-      justify-content: space-around;
-      padding: 12px 0;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-    }
+        .see-more {
+            color: #e50914;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 8px;
+            display: none;
+        }
 
-    .footer-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: #888;
-      font-size: 12px;
-      text-decoration: none;
-    }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 12px 0;
+        }
 
-    .footer-btn.active {
-      color: #e50914;
-      font-weight: bold;
-    }
+        .stat-badge {
+            background: #ffebee;
+            color: #c62828;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
 
-    .footer-btn i {
-      font-size: 20px;
-      margin-bottom: 4px;
-    }
+        .post-actions {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 12px;
+        }
 
-    #postPopup {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.6);
-      z-index: 200;
-      justify-content: center;
-      align-items: center;
-    }
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #555;
+            cursor: pointer;
+            font-size: 14px;
+        }
 
-    .popup-content {
-      background: white;
-      padding: 24px;
-      border-radius: 20px;
-      width: 90%;
-      max-width: 400px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    }
+        .action-btn.liked i {
+            color: #e50914 !important;
+        }
 
-    .popup-title {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #e50914;
-      font-size: 20px;
-      font-weight: bold;
-    }
+        .empty-feed {
+            text-align: center;
+            color: #888;
+            font-size: 18px;
+            margin-top: 40px;
+        }
 
-    textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 12px;
-      resize: none;
-      height: 100px;
-      margin-bottom: 16px;
-      font-size: 16px;
-    }
+        /* Live Tab Styling */
+        .live-container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0;
+        }
 
-    .popup-buttons {
-      display: flex;
-      gap: 12px;
-    }
+        #liveVideoPlayer {
+            width: 100%;
+            height: 360px;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            position: relative;
+        }
 
-    button {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      border-radius: 12px;
-      font-weight: bold;
-      cursor: pointer;
-    }
+        .live-info {
+            padding: 16px;
+            width: 100%;
+            text-align: center;
+        }
 
-    .btn-cancel {
-      background: #f1f1f1;
-      color: #333;
-    }
+        .live-info h3 {
+            color: #e50914;
+            margin-bottom: 8px;
+        }
 
-    .btn-post {
-      background: #e50914;
-      color: white;
-    }
-  </style>
+        .no-live {
+            text-align: center;
+            color: #888;
+            margin-top: 40px;
+            font-size: 18px;
+        }
+
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+
+        .footer-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #888;
+            font-size: 12px;
+            text-decoration: none;
+        }
+
+        .footer-btn.active {
+            color: #e50914;
+            font-weight: bold;
+        }
+
+        .footer-btn i {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        .alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            padding: 28px 32px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            opacity: 0;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+            text-align: center;
+            max-width: 90%;
+            font-size: 20px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            line-height: 1.4;
+        }
+
+        .alert.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #00c853, #007e33);
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+        }
+
+        .alert-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        #postPopup, #deletePopup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .popup-content {
+            background: white;
+            padding: 24px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        .popup-title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #e50914;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            resize: none;
+            height: 100px;
+            margin-bottom: 16px;
+            font-size: 16px;
+        }
+
+        .popup-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            background: #f1f1f1;
+            color: #333;
+        }
+
+        .btn-post, .btn-delete {
+            color: white;
+        }
+
+        .btn-post {
+            background: #e50914;
+        }
+
+        .btn-delete {
+            background: #d32f2f;
+        }
+    </style>
 </head>
 <body>
 
-  <header>
-    <div class="header-title">Wonderland</div>
-    <a href="profile.html" class="profile-icon" id="headerUserInitial">U</a>
-  </header>
+    <header>
+        <div class="header-title">wöndèlånd</div>
+        <a href="profile.html" class="profile-icon" id="headerUserInitial">U</a>
+    </header>
 
-  <div id="postBtn">
-    <i class="fas fa-plus"></i>
-  </div>
-
-  <div class="feed" id="feed">
-    <!-- Posts will appear here -->
-  </div>
-
-  <!-- Post Popup -->
-  <div id="postPopup">
-    <div class="popup-content">
-      <div class="popup-title">Create Post</div>
-      <textarea id="postContent" placeholder="What's on your mind?"></textarea>
-      <div class="popup-buttons">
-        <button class="btn-cancel" onclick="closePopup()">Cancel</button>
-        <button class="btn-post" onclick="createPost()">Post</button>
-      </div>
+    <div class="tabs">
+        <div class="tab active" data-tab="posts">Posts</div>
+        <div class="tab" data-tab="live">Live</div>
     </div>
-  </div>
 
-  <footer>
-    <a href="dashboard.html" class="footer-btn active">
-      <i class="fas fa-home"></i> Home
-    </a>
-    <a href="friends.html" class="footer-btn">
-      <i class="fas fa-users"></i> Friends
-    </a>
-    <a href="market.html" class="footer-btn">
-      <i class="fas fa-shopping-bag"></i> Market
-    </a>
-    <a href="notifications.html" class="footer-btn">
-      <i class="fas fa-bell"></i> Alerts
-    </a>
-  </footer>
+    <div id="postBtn" style="display: none;" onclick="document.getElementById('postPopup').style.display='flex'">
+        <i class="fas fa-plus"></i>
+    </div>
 
-  <script type="module">
-    // ✅ FIXED: NO TRAILING SPACES IN IMPORTS
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, query, orderBy, getDocs, addDoc, serverTimestamp, doc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    <div class="tab-content active" id="postsTab">
+        <div class="feed" id="feed">
+            <!-- Posts loaded here -->
+        </div>
+    </div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
-      authDomain: "emmy-programmers.firebaseapp.com",
-      projectId: "emmy-programmers",
-      storageBucket: "emmy-programmers.firebasestorage.app",
-      messagingSenderId: "351752440867",
-      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
-    };
+    <div class="tab-content" id="liveTab">
+        <div class="live-feed" id="liveFeed">
+            <!-- Live stream or status shown here -->
+        </div>
+    </div>
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    <div id="alert" class="alert">
+        <span class="alert-icon">✨</span>
+        <span id="alert-message">Action completed!</span>
+    </div>
 
-    const ADMIN_EMAIL = "bluepay863@gmail.com";
-    let currentUser = null;
-    const likedPosts = new Set();
-
-    // ✅ 100+ school images — NO TRAILING SPACES
-    const schoolImages = [
-      "https://images.unsplash.com/photo-1523580494863-6f3031224c94",
-      "https://images.unsplash.com/photo-1509062522246-3755977927d7",
-      "https://images.unsplash.com/photo-1589998059171-988d887df646",
-      "https://images.unsplash.com/photo-1523240795612-9a054b0db644",
-      "https://images.unsplash.com/photo-1516802273409-68526ee1bdd6",
-      "https://images.unsplash.com/photo-1503676260728-1c00da094a0b",
-      "https://images.unsplash.com/photo-1506157786151-b8491531f063",
-      "https://images.unsplash.com/photo-1546069901-ba9599a7e63c",
-      "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
-      "https://images.unsplash.com/photo-1565299624946-b2f2b8c5e7a6",
-      "https://images.unsplash.com/photo-1555939594-58d7cb561ad1",
-      "https://images.unsplash.com/photo-1563245372-f60088942622",
-      "https://images.unsplash.com/photo-1547592167-2c8c2a8a8a8a",
-      "https://images.unsplash.com/photo-1603133872878-684f20873a82",
-      "https://images.unsplash.com/photo-1565958011703-44f9829ba187",
-      "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2",
-      "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
-      "https://images.unsplash.com/photo-1528735602780-2552fd46c7af",
-      "https://images.unsplash.com/photo-1562967917-995d8c8765b9",
-      "https://images.unsplash.com/photo-1563379973274-94c2c6a61a33",
-      "https://images.unsplash.com/photo-1556911220-e15b29be8c8f",
-      "https://images.unsplash.com/photo-1557804506-669a67965ba0",
-      "https://images.unsplash.com/photo-1562967916-9b5d5b8c8b5e",
-      "https://images.unsplash.com/photo-1626082927389-6cd3e2e7b7c5",
-      "https://images.unsplash.com/photo-1603532648955-a0f9a5e7c7e0",
-      "https://images.unsplash.com/photo-1565557623262-b5193d9e68c0",
-      "https://images.unsplash.com/photo-1578985545062-69928b1d9587",
-      "https://images.unsplash.com/photo-1606312619070-d48b4c652a52",
-      "https://images.unsplash.com/photo-1633332758227-9c7e73a2d5f0",
-      "https://images.unsplash.com/photo-1603302576718-8e5e9e8e9e8e",
-      "https://images.unsplash.com/photo-1584132960527-9a9e5a8c8f0a",
-      "https://images.unsplash.com/photo-1605256789628-955f0d5c5a9e",
-      "https://images.unsplash.com/photo-1600271886742-f049cd55a5d4",
-      "https://images.unsplash.com/photo-1595008937846-8a6e8c8f0a8a",
-      "https://images.unsplash.com/photo-1503572378481-2d3c7e4a5d8e",
-      "https://images.unsplash.com/photo-1511277425579-2e5d9c3c3a28",
-      "https://images.unsplash.com/photo-1529337530680-9e5a6b3a2c4e",
-      "https://images.unsplash.com/photo-1543269865-cbf427effbad",
-      "https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8",
-      "https://images.unsplash.com/photo-1506218583350-91e8e4d6a90d"
-      // You can add more if needed — 40 is enough for demo
-    ];
-
-    function getInitials(name) {
-      return name ? name.charAt(0).toUpperCase() : 'U';
-    }
-
-    function timeAgo(timestamp) {
-      if (!timestamp?.toDate) return 'Just now';
-      const seconds = Math.floor((new Date() - timestamp.toDate()) / 1000);
-      if (seconds < 60) return 'Just now';
-      let interval = seconds / 60;
-      if (interval < 60) return Math.floor(interval) + "min ago";
-      interval = seconds / 3600;
-      if (interval < 24) return Math.floor(interval) + "hr ago";
-      return Math.floor(seconds / 86400) + "d ago";
-    }
-
-    function formatLikes(num) {
-      if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-      return num.toString();
-    }
-
-    function showAlert(message, isError = false) {
-      Swal.fire({
-        text: message,
-        icon: isError ? 'error' : 'success',
-        timer: 3000,
-        showConfirmButton: false
-      });
-    }
-
-    function closePopup() {
-      document.getElementById('postPopup').style.display = 'none';
-    }
-
-    async function createPost() {
-      const content = document.getElementById('postContent').value.trim();
-      if (!content) return showAlert("Post cannot be empty.", true);
-
-      Swal.fire({
-        title: 'Posting...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-      });
-
-      try {
-        const randomImage = schoolImages[Math.floor(Math.random() * schoolImages.length)];
-        await addDoc(collection(db, "posts"), {
-          userId: currentUser.uid,
-          username: currentUser.displayName || currentUser.email.split('@')[0],
-          content: content,
-          imageUrl: randomImage,
-          baseLikes: Math.floor(Math.random() * 300) + 200, // 200–499
-          timestamp: serverTimestamp()
-        });
-        Swal.close();
-        showAlert("Post created!");
-        closePopup();
-        document.getElementById('postContent').value = '';
-        loadPosts();
-      } catch (err) {
-        Swal.close();
-        console.error(err);
-        showAlert("Failed to create post.", true);
-      }
-    }
-
-    function calculateLikes(baseLikes, timestamp) {
-      if (!timestamp?.toDate) return baseLikes;
-      const ageMs = new Date() - timestamp.toDate();
-      const hours = ageMs / (1000 * 60 * 60);
-      if (hours >= 72) {
-        return baseLikes + 800 + Math.floor(Math.random() * 200); // ~1000–1699
-      } else if (hours >= 24) {
-        return baseLikes + 300 + Math.floor(Math.random() * 200); // ~500–1199
-      }
-      return baseLikes; // 200–499
-    }
-
-    async function likePost(postId, likeBtn) {
-      if (!currentUser) return showAlert("You must be logged in to like.", true);
-      if (likedPosts.has(postId)) return;
-
-      try {
-        const likeRef = doc(db, "likes", `${currentUser.uid}_${postId}`);
-        await setDoc(likeRef, { likedAt: serverTimestamp() });
-        likedPosts.add(postId);
-
-        const statBadge = likeBtn.closest('.post').querySelector('.stat-badge');
-        let currentLikes = parseInt(statBadge.dataset.likes) || 200;
-        currentLikes += 1;
-        statBadge.dataset.likes = currentLikes;
-        statBadge.textContent = `❤️ ${formatLikes(currentLikes)}`;
-        likeBtn.classList.add('liked');
-        likeBtn.querySelector('i').className = "fas fa-heart";
-
-        showAlert("Liked!");
-      } catch (err) {
-        console.error(err);
-        showAlert("Failed to like post.", true);
-      }
-    }
-
-    async function requestDeletePost(postId) {
-      const result = await Swal.fire({
-        title: 'Delete Post?',
-        text: "This action cannot be undone.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: 'Cancel'
-      });
-      if (result.isConfirmed) {
-        try {
-          await deleteDoc(doc(db, "posts", postId));
-          Swal.fire('Deleted!', 'Your post has been removed.', 'success');
-          loadPosts();
-        } catch (err) {
-          console.error(err);
-          showAlert("Failed to delete post.", true);
-        }
-      }
-    }
-
-    async function loadPosts() {
-      const feed = document.getElementById('feed');
-      feed.innerHTML = '<div class="empty-feed">Loading...</div>';
-
-      try {
-        const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
-        const querySnapshot = await getDocs(q);
-
-        if (querySnapshot.empty) {
-          feed.innerHTML = '<div class="empty-feed">No posts yet.</div>';
-          return;
-        }
-
-        feed.innerHTML = '';
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          const postId = doc.id;
-          const isOwner = currentUser && data.userId === currentUser.uid;
-          const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
-
-          const postTime = timeAgo(data.timestamp);
-          const likes = calculateLikes(data.baseLikes, data.timestamp);
-          const canDelete = isAdmin || isOwner;
-
-          const postEl = document.createElement('div');
-          postEl.className = 'post-container';
-          postEl.innerHTML = `
-            <div class="post">
-              ${canDelete ? `<div class="delete-btn" onclick="requestDeletePost('${postId}')">×</div>` : ''}
-              <img class="post-image" src="${data.imageUrl}" alt="Post image" onerror="this.style.display='none'">
-              <div class="post-body">
-                <div class="post-header">
-                  <div class="post-avatar">${getInitials(data.username)}</div>
-                  <div class="post-info">
-                    <div class="post-username">${data.username}</div>
-                    <div class="post-time">${postTime}</div>
-                  </div>
-                </div>
-                <div class="post-content">${data.content}</div>
-                <div class="stats">
-                  <div class="stat-badge" data-likes="${likes}">❤️ ${formatLikes(likes)}</div>
-                </div>
-                <div class="post-actions">
-                  <div class="action-btn" onclick="likePost('${postId}', this)">
-                    <i class="far fa-heart"></i>
-                    <span>Like</span>
-                  </div>
-                </div>
-              </div>
+    <div id="postPopup">
+        <div class="popup-content">
+            <div class="popup-title">Create Post</div>
+            <textarea id="postContent" placeholder="Share something educational..."></textarea>
+            <div class="popup-buttons">
+                <button class="btn-cancel" onclick="closePopup('postPopup')">Cancel</button>
+                <button class="btn-post" onclick="createPost()">Post</button>
             </div>
-          `;
-          feed.appendChild(postEl);
-        });
-      } catch (err) {
-        console.error(err);
-        feed.innerHTML = '<div class="empty-feed">Failed to load posts.</div>';
-      }
-    }
+        </div>
+    </div>
 
-    // Auth state listener
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        currentUser = user;
-        document.getElementById('headerUserInitial').textContent = getInitials(user.displayName || user.email.split('@')[0]);
+    <div id="deletePopup">
+        <div class="popup-content">
+            <div class="popup-title">Delete Post?</div>
+            <p style="text-align:center; margin-bottom:20px;">This post violates community guidelines.</p>
+            <div class="popup-buttons">
+                <button class="btn-cancel" onclick="closePopup('deletePopup')">Cancel</button>
+                <button class="btn-delete" onclick="confirmDeletePost()">Delete</button>
+            </div>
+        </div>
+    </div>
 
-        // ✅ Show post button ONLY for admin
-        if (user.email === ADMIN_EMAIL) {
-          document.getElementById('postBtn').style.display = 'flex';
+    <audio id="likeSound" preload="auto"></audio>
+
+    <footer>
+        <a href="dashboard.html" class="footer-btn active">
+            <i class="fas fa-home"></i> Home
+        </a>
+        <a href="friends.html" class="footer-btn">
+            <i class="fas fa-users"></i> Friends
+        </a>
+        <a href="market.html" class="footer-btn">
+            <i class="fas fa-shopping-bag"></i> Market
+        </a>
+        <a href="notifications.html" class="footer-btn">
+            <i class="fas fa-bell"></i> Alerts
+        </a>
+    </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            query, 
+            orderBy, 
+            getDocs, 
+            addDoc, 
+            serverTimestamp, 
+            doc, 
+            deleteDoc,
+            onSnapshot
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+            authDomain: "emmy-programmers.firebaseapp.com",
+            projectId: "emmy-programmers",
+            storageBucket: "emmy-programmers.firebasestorage.app",
+            messagingSenderId: "351752440867",
+            appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const ADMIN_EMAIL = "bluepay863@gmail.com";
+        const CHANNEL_NAME = "live_room";
+
+        let currentUser = null;
+        let postToDelete = null;
+        let likedPosts = new Set();
+        let agoraClient = null;
+        let remotePlayer = null;
+
+        const educationImages = Array.from({ length: 100 }, (_, i) =>
+            `https://source.unsplash.com/800x600/?education,book,study,classroom,${i}`
+        );
+
+        // Load Agora SDK
+        const agoraScript = document.createElement('script');
+        agoraScript.src = "https://download.agora.io/sdk/release/AgoraRTC_N.js";
+        document.head.appendChild(agoraScript);
+
+        function getInitials(name) {
+            return name ? name.charAt(0).toUpperCase() : 'U';
         }
 
-        loadPosts();
-      } else {
-        window.location.href = 'login.html';
-      }
-    });
+        function timeAgo(timestamp) {
+            if (!timestamp?.toDate) return 'Just now';
+            const seconds = Math.floor((new Date() - timestamp.toDate()) / 1000);
+            if (seconds < 60) return 'Just now';
+            let interval = seconds / 60;
+            if (interval < 60) return Math.floor(interval) + "min ago";
+            interval = seconds / 3600;
+            if (interval < 24) return Math.floor(interval) + "hr ago";
+            interval = seconds / 86400;
+            if (interval < 30) return Math.floor(interval) + "d ago";
+            return Math.floor(interval / 30) + "mo ago";
+        }
 
-    // Attach global functions to window for inline onclick
-    window.closePopup = closePopup;
-    window.createPost = createPost;
-    window.likePost = likePost;
-    window.requestDeletePost = requestDeletePost;
+        function formatLikes(num) {
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+            }
+            return num.toString();
+        }
 
-    // Open post popup
-    document.getElementById('postBtn').addEventListener('click', () => {
-      document.getElementById('postPopup').style.display = 'flex';
-    });
-  </script>
+        function showAlert(message, isError = false) {
+            const alertEl = document.getElementById('alert');
+            document.getElementById('alert-message').textContent = message;
+            alertEl.className = `alert ${isError ? 'alert-error' : 'alert-success'} show`;
+            setTimeout(() => {
+                alertEl.classList.remove('show');
+            }, 6000);
+        }
+
+        function closePopup(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function toggleSeeMore(contentEl, fullText) {
+            const isCollapsed = contentEl.classList.contains('collapsed');
+            contentEl.classList.toggle('collapsed', !isCollapsed);
+            contentEl.textContent = isCollapsed ? fullText : fullText.split(' ').slice(0, 40).join(' ') + '...';
+            const seeMore = contentEl.nextElementSibling;
+            if (seeMore) seeMore.textContent = isCollapsed ? 'See less' : 'See more';
+        }
+
+        async function createPost() {
+            const content = document.getElementById('postContent').value.trim();
+            if (!content) return showAlert("Post cannot be empty.", true);
+
+            try {
+                const imageUrl = educationImages[Math.floor(Math.random() * educationImages.length)];
+                const baseLikes = Math.floor(Math.random() * 500) + 500;
+
+                await addDoc(collection(db, "posts"), {
+                    userId: currentUser.uid,
+                    username: currentUser.username || currentUser.email.split('@')[0],
+                    content: content,
+                    imageUrl: imageUrl,
+                    likes: baseLikes,
+                    timestamp: serverTimestamp()
+                });
+
+                showAlert("Post created successfully!", false);
+                closePopup('postPopup');
+                document.getElementById('postContent').value = '';
+                loadPosts();
+            } catch (err) {
+                console.error("Post error:", err);
+                showAlert("Failed to create post.", true);
+            }
+        }
+
+        function likePost(postId, likeBtn) {
+            if (likedPosts.has(postId)) {
+                showAlert("You already liked this post.", false);
+                return;
+            }
+
+            const sound = document.getElementById('likeSound');
+            sound.src = "https://www.soundjay.com/buttons/sounds/button-09.mp3";
+            sound.play().catch(() => {});
+
+            const statBadge = likeBtn.closest('.post').querySelector('.stat-badge');
+            let currentLikes = parseInt(statBadge.dataset.likes) || 500;
+            currentLikes += 1;
+            statBadge.dataset.likes = currentLikes;
+            statBadge.innerHTML = `<i class="fas fa-heart"></i> ${formatLikes(currentLikes)}`;
+
+            likeBtn.querySelector('i').className = "fas fa-heart";
+            likeBtn.classList.add('liked');
+            likedPosts.add(postId);
+            showAlert("Liked!", false);
+        }
+
+        function requestDeletePost(postId) {
+            postToDelete = postId;
+            document.getElementById('deletePopup').style.display = 'flex';
+        }
+
+        async function confirmDeletePost() {
+            if (!postToDelete) return;
+            try {
+                await deleteDoc(doc(db, "posts", postToDelete));
+                showAlert("Post deleted successfully!", false);
+                closePopup('deletePopup');
+                loadPosts();
+            } catch (err) {
+                console.error("Delete error:", err);
+                showAlert("Failed to delete post.", true);
+            }
+        }
+
+        function calculateLikes(baseLikes, timestamp) {
+            if (!timestamp?.toDate) return baseLikes;
+            const ageMs = new Date() - timestamp.toDate();
+            const hours = ageMs / (1000 * 60 * 60);
+            const extra = Math.floor(hours / 5) * Math.floor(Math.random() * 4 + 1);
+            return baseLikes + extra;
+        }
+
+        function renderPost(post) {
+            const timeStr = timeAgo(post.timestamp);
+            const actualLikes = calculateLikes(post.likes, post.timestamp);
+                        const displayLikes = formatLikes(actualLikes);
+            const isOwner = currentUser?.email === ADMIN_EMAIL;
+            const words = post.content.split(' ');
+            const isLong = words.length > 40;
+            const displayText = isLong ? words.slice(0, 40).join(' ') + '...' : post.content;
+
+            const postEl = document.createElement('div');
+            postEl.className = 'post-container';
+            // Escape backticks in content to avoid template literal break
+            const safeContent = post.content.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+            postEl.innerHTML = `
+                <div class="post">
+                    ${isOwner ? `<div class="delete-btn" onclick="requestDeletePost('${post.id}')">×</div>` : ''}
+                    <img src="${post.imageUrl}" class="post-image" alt="Educational" />
+                    <div class="post-body">
+                        <div class="post-header">
+                            <div class="post-avatar">${getInitials(post.username)}</div>
+                            <div class="post-info">
+                                <div class="post-username">${post.username}</div>
+                                <div class="post-time">${timeStr}</div>
+                            </div>
+                        </div>
+                        <div class="post-content ${isLong ? 'collapsed' : ''}">${displayText}</div>
+                        ${isLong ? `<div class="see-more" onclick="toggleSeeMore(this.previousElementSibling, \`${safeContent}\`)">See more</div>` : ''}
+                        <div class="stats">
+                            <div class="stat-badge" data-likes="${actualLikes}">
+                                <i class="fas fa-heart"></i> ${displayLikes}
+                            </div>
+                        </div>
+                        <div class="post-actions">
+                            <div class="action-btn" onclick="likePost('${post.id}', this)">
+                                <i class="far fa-heart"></i>
+                                <span>Like</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return postEl;
+        }
+
+        async function loadPosts() {
+            const feed = document.getElementById('feed');
+            try {
+                const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+                const snap = await getDocs(q);
+                const posts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                if (posts.length === 0) {
+                    feed.innerHTML = `<div class="empty-feed">No educational posts yet.</div>`;
+                    return;
+                }
+
+                feed.innerHTML = '';
+                posts.forEach(post => {
+                    feed.appendChild(renderPost(post));
+                });
+            } catch (err) {
+                console.error("Load posts error:", err);
+                feed.innerHTML = `<div class="empty-feed">Failed to load posts.</div>`;
+            }
+        }
+
+        // --- LIVE STREAM HANDLING ---
+        async function initAgoraViewer() {
+            // Wait for AgoraRTC to load
+            if (typeof AgoraRTC === 'undefined') {
+                setTimeout(initAgoraViewer, 300);
+                return;
+            }
+
+            try {
+                agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+                await agoraClient.join("fcfbeea054a84e529a1d984becbb4774", CHANNEL_NAME, null, null);
+
+                agoraClient.on("user-published", async (user, mediaType) => {
+                    await agoraClient.subscribe(user, mediaType);
+                    if (mediaType === "video") {
+                        const playerContainer = document.getElementById('liveVideoPlayer');
+                        playerContainer.innerHTML = '';
+                        remotePlayer = document.createElement('div');
+                        remotePlayer.id = `player-${user.uid}`;
+                        remotePlayer.style.width = '100%';
+                        remotePlayer.style.height = '100%';
+                        playerContainer.appendChild(remotePlayer);
+                        user.videoTrack.play(remotePlayer);
+                    }
+                });
+
+                agoraClient.on("user-unpublished", (user, mediaType) => {
+                    if (mediaType === "video" && remotePlayer) {
+                        remotePlayer.remove();
+                        remotePlayer = null;
+                    }
+                });
+
+            } catch (e) {
+                console.error("Agora viewer error:", e);
+                document.getElementById('liveVideoPlayer').innerHTML = 'Failed to load stream';
+            }
+        }
+
+        function cleanupAgora() {
+            if (agoraClient) {
+                agoraClient.leave().catch(console.warn);
+                agoraClient = null;
+            }
+            if (remotePlayer) {
+                remotePlayer.remove();
+                remotePlayer = null;
+            }
+        }
+
+        function renderLiveTab(isLive, lastLiveTime = null) {
+            const liveFeed = document.getElementById('liveFeed');
+            if (isLive) {
+                liveFeed.innerHTML = `
+                    <div class="live-container">
+                        <div id="liveVideoPlayer">Connecting...</div>
+                        <div class="live-info">
+                            <h3>Admin is LIVE now</h3>
+                            <p>Join the educational stream</p>
+                        </div>
+                    </div>
+                `;
+                // Initialize Agora viewer only when tab is active and live
+                setTimeout(initAgoraViewer, 500);
+            } else {
+                let statusText = "No live class available";
+                if (lastLiveTime) {
+                    statusText = `Last live: ${timeAgo(lastLiveTime)}`;
+                }
+                liveFeed.innerHTML = `
+                    <div class="no-live">
+                        <i class="fas fa-video-slash" style="font-size:48px; margin-bottom:16px; color:#e50914;"></i>
+                        <p>${statusText}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function subscribeToLiveSession() {
+            const sessionRef = doc(db, 'live_sessions', 'live_room');
+            onSnapshot(sessionRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.active) {
+                        renderLiveTab(true);
+                        return;
+                    }
+                }
+                // Use last known startedAt if exists
+                const lastActive = docSnap.exists() && docSnap.data().startedAt 
+                    ? docSnap.data().startedAt 
+                    : null;
+                renderLiveTab(false, lastActive);
+            });
+        }
+
+        // --- TAB SWITCHING ---
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                const target = tab.dataset.tab;
+                document.getElementById(`${target}Tab`).classList.add('active');
+
+                if (target === 'live') {
+                    subscribeToLiveSession();
+                } else {
+                    cleanupAgora();
+                }
+            });
+        });
+
+        // --- GLOBAL FUNCTIONS (accessible from HTML onclick) ---
+        window.toggleSeeMore = toggleSeeMore;
+        window.likePost = likePost;
+        window.requestDeletePost = requestDeletePost;
+        window.closePopup = closePopup;
+        window.createPost = createPost;
+        window.confirmDeletePost = confirmDeletePost;
+
+        // --- AUTH & INIT ---
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            currentUser = user;
+            // Get username from Firestore or fallback to email prefix
+            const userInitial = (user.email || '').split('@')[0].charAt(0).toUpperCase();
+            document.getElementById('headerUserInitial').textContent = userInitial;
+
+            // Show post button only for admin
+            if (user.email === ADMIN_EMAIL) {
+                document.getElementById('postBtn').style.display = 'flex';
+            }
+
+            loadPosts();
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', cleanupAgora);
+    </script>
 </body>
 </html>
