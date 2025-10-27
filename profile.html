@@ -197,7 +197,6 @@
   </footer>
 
   <script type="module">
-    // ✅ FIXED: Removed trailing spaces in URLs
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -215,19 +214,22 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    const ADMIN_EMAIL = "bluepay863@gmail.com";
+
     function getInitials(name) {
       if (!name) return 'U';
       return name.trim().charAt(0).toUpperCase();
     }
 
-    async function loadProfile() {
-      const user = auth.currentUser;
+    let currentUser = null;
+
+    async function loadProfile(user) {
       if (!user) return;
 
+      currentUser = user;
       const email = user.email;
       document.getElementById('profileEmail').textContent = email;
 
-      // 🔑 CRITICAL FIX: Read from users/{email}, not users/{uid}
       const userDoc = await getDoc(doc(db, 'users', email));
       let username = email.split('@')[0];
       let phone = '—';
@@ -246,17 +248,31 @@
       document.getElementById('profileClass').textContent = userClass;
     }
 
-    // Set up buttons
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('liveBtn')?.addEventListener('click', () => {
-        window.location.href = 'live.html';
-      });
+    // Setup button listeners AFTER user is known
+    function setupButtons() {
+      document.getElementById('liveBtn').onclick = () => {
+        if (currentUser && currentUser.email === ADMIN_EMAIL) {
+          window.location.href = 'live.html';
+        } else {
+          Swal.fire({
+            title: 'Access Restricted',
+            text: 'You cannot go live for security reasons and school community guidelines.',
+            icon: 'info',
+            confirmButtonColor: '#e50914'
+          });
+        }
+      };
 
-      document.getElementById('settingsBtn')?.addEventListener('click', () => {
-        window.location.href = 'settings.html'; // 👈 Redirects to settings
-      });
+      document.getElementById('settingsBtn').onclick = () => {
+        Swal.fire({
+          title: 'Coming Soon',
+          text: 'This feature will be implemented later.',
+          icon: 'info',
+          confirmButtonColor: '#e50914'
+        });
+      };
 
-      document.getElementById('logoutBtn')?.addEventListener('click', () => {
+      document.getElementById('logoutBtn').onclick = () => {
         Swal.fire({
           title: 'Are you sure?',
           text: "You will be logged out of your account.",
@@ -276,12 +292,14 @@
             });
           }
         });
-      });
-    });
+      };
+    }
 
-    onAuthStateChanged(auth, (user) => {
+    // Wait for auth state to stabilize
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
-        loadProfile();
+        await loadProfile(user);
+        setupButtons(); // ✅ Buttons set up AFTER user is confirmed
       } else {
         window.location.href = 'login.html';
       }
