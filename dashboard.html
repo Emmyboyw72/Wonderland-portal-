@@ -69,6 +69,7 @@
             font-size: 24px;
             cursor: pointer;
             z-index: 90;
+            display: none;
         }
 
         .tabs {
@@ -304,7 +305,7 @@
             font-size: 18px;
         }
 
-        .join-live-btn {
+        .join-live-btn, .leave-live-btn {
             background: #e50914;
             color: white;
             border: none;
@@ -314,6 +315,11 @@
             cursor: pointer;
             margin-top: 16px;
             font-size: 16px;
+            width: 80%;
+        }
+
+        .leave-live-btn {
+            background: #d32f2f;
         }
 
         footer {
@@ -458,7 +464,6 @@
             background: #d32f2f;
         }
 
-        /* Loader */
         .loader {
             display: none;
             position: fixed;
@@ -498,7 +503,7 @@
         <div class="tab" data-tab="live">Live</div>
     </div>
 
-    <div id="postBtn" style="display: none;" onclick="document.getElementById('postPopup').style.display='flex'">
+    <div id="postBtn" onclick="document.getElementById('postPopup').style.display='flex'">
         <i class="fas fa-plus"></i>
     </div>
 
@@ -545,8 +550,6 @@
         </div>
     </div>
 
-    <audio id="likeSound" preload="auto"></audio>
-
     <footer>
         <a href="dashboard.html" class="footer-btn active">
             <i class="fas fa-home"></i> Home
@@ -576,7 +579,8 @@
             deleteDoc,
             onSnapshot,
             updateDoc,
-            getDoc
+            getDoc,
+            setDoc
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -594,19 +598,15 @@
 
         const ADMIN_EMAIL = "bluepay863@gmail.com";
         const ADMIN_DISPLAY_NAME = "wonderland portal";
-        const AGORA_APP_ID = "fcfbeea054a84e529a1d984becbb4774";
 
         let currentUser = null;
         let postToDelete = null;
         let likedPosts = new Set();
         let postsUnsub = null;
         let sessionUnsub = null;
+        let isUserInLive = false;
 
-        // Working educational images
-        const educationKeywords = [
-            "education", "book", "study", "classroom", "learning", "school", "university", "student", "teacher", "knowledge"
-        ];
-
+        const educationKeywords = ["education", "book", "study", "classroom", "learning", "school", "university", "student", "teacher", "knowledge"];
         function getRandomImage() {
             const keyword = educationKeywords[Math.floor(Math.random() * educationKeywords.length)];
             const seed = Math.floor(Math.random() * 1000);
@@ -645,9 +645,7 @@
             const alertEl = document.getElementById('alert');
             document.getElementById('alert-message').textContent = message;
             alertEl.className = `alert ${isError ? 'alert-error' : 'alert-success'} show`;
-            setTimeout(() => {
-                alertEl.classList.remove('show');
-            }, 6000);
+            setTimeout(() => alertEl.classList.remove('show'), 6000);
         }
 
         function showLoader(show = true) {
@@ -658,20 +656,7 @@
             document.getElementById(id).style.display = 'none';
         }
 
-        function toggleSeeMore(contentEl, fullText) {
-            const isCollapsed = contentEl.classList.contains('collapsed');
-            if (isCollapsed) {
-                contentEl.classList.remove('collapsed');
-                contentEl.textContent = fullText;
-                contentEl.nextElementSibling.textContent = 'See less';
-            } else {
-                const short = fullText.split(' ').slice(0, 40).join(' ') + '...';
-                contentEl.classList.add('collapsed');
-                contentEl.textContent = short;
-                contentEl.nextElementSibling.textContent = 'See more';
-            }
-        }
-
+        // === POSTS ===
         async function createPost() {
             const content = document.getElementById('postContent').value.trim();
             if (!content) return showAlert("Post cannot be empty.", true);
@@ -679,7 +664,6 @@
             showLoader(true);
             try {
                 const imageUrl = getRandomImage();
-                // Random base likes per post (500–2000)
                 const baseLikes = Math.floor(Math.random() * 1501) + 500;
 
                 await addDoc(collection(db, "posts"), {
@@ -703,177 +687,180 @@
             }
         }
 
-                async function likePost(postId, likeBtn) {
-            // Get current like count from Firestore (not local state)
+        async function likePost(postId, likeBtn) {
+            if (!currentUser) return;
             const postRef = doc(db, "posts", postId);
-            const postSnap = await getDoc(postRef);
-            if (!postSnap.exists()) return showAlert("Post not found.", true);
+            const postDoc = await getDoc(postRef);
+            if (!postDoc.exists()) return;
 
-            const currentData = postSnap.data();
-            const newLikes = currentData.likes + 1;
+            const data = postDoc.data();
+            const currentLikes = data.likes || 0;
+            const newLikes = currentLikes + 1;
 
-            // Update in Firestore — all users see same count
-            await updateDoc(postRef, {
-                likes: newLikes
-            });
+            await updateDoc(postRef, { likes: newLikes });
 
-            // Update UI immediately
-            const statBadge = likeBtn.closest('.post').querySelector('.stat-badge');
-            statBadge.dataset.likes = newLikes;
-            statBadge.innerHTML = `<i class="fas fa-heart"></i> ${formatLikes(newLikes)}`;
-
-            likeBtn.querySelector('i').className = "fas fa-heart";
-            likeBtn.classList.add('liked');
             likedPosts.add(postId);
-
-            // Play sound
-            const sound = document.getElementById('likeSound');
-            sound.src = "https://assets.mixkit.co/sfx/preview/mixkit-like-tweet-2668.mp3";
-            sound.play().catch(() => {});
-
-            showAlert("Liked!", false);
+            likeBtn.classList.add('liked');
+            likeBtn.querySelector('.like-count').textContent = formatLikes(newLikes);
         }
 
-        function requestDeletePost(postId) {
+                function renderPost(post) {
+            const postEl = document.createElement('div');
+            postEl.className = 'post-container';
+            const isLiked = likedPosts.has(post.id);
+
+            const deleteBtn = currentUser?.email === ADMIN_EMAIL 
+                ? `<div class="delete-btn" onclick="deletePostPrompt('${post.id}')">×</div>` 
+                : '';
+
+            postEl.innerHTML = `
+                <div class="post">
+                    ${deleteBtn}
+                    <img class="post-image" src="${post.imageUrl || 'https://via.placeholder.com/800x600?text=Educational+Post'}" onerror="this.src='https://via.placeholder.com/800x600?text=Educational+Post'">
+                    <div class="post-body">
+                        <div class="post-header">
+                            <div class="post-avatar">${getInitials(post.username)}</div>
+                            <div class="post-info">
+                                <div class="post-username">${post.username || 'wonderland portal'}</div>
+                                <div class="post-time">${timeAgo(post.timestamp)}</div>
+                            </div>
+                        </div>
+                        <div class="post-content collapsed">${post.content}</div>
+                        <div class="stats">
+                            <div class="stat-badge"><i class="fas fa-heart"></i> ${formatLikes(post.likes)}</div>
+                        </div>
+                        <div class="post-actions">
+                            <div class="action-btn ${isLiked ? 'liked' : ''}" onclick="likePost('${post.id}', this)">
+                                <i class="fas fa-heart"></i>
+                                <span class="like-count">${formatLikes(post.likes)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const contentEl = postEl.querySelector('.post-content');
+            if (post.content.split(' ').length > 40) {
+                const short = post.content.split(' ').slice(0, 40).join(' ') + '...';
+                contentEl.textContent = short;
+                contentEl.classList.add('collapsed');
+                const seeMore = document.createElement('div');
+                seeMore.className = 'see-more';
+                seeMore.textContent = 'See more';
+                seeMore.onclick = () => {
+                    if (contentEl.classList.contains('collapsed')) {
+                        contentEl.classList.remove('collapsed');
+                        contentEl.textContent = post.content;
+                        seeMore.textContent = 'See less';
+                    } else {
+                        contentEl.classList.add('collapsed');
+                        contentEl.textContent = short;
+                        seeMore.textContent = 'See more';
+                    }
+                };
+                postEl.querySelector('.post-body').appendChild(seeMore);
+            }
+
+            return postEl;
+        }
+
+        function deletePostPrompt(postId) {
             postToDelete = postId;
             document.getElementById('deletePopup').style.display = 'flex';
         }
 
         async function confirmDeletePost() {
             if (!postToDelete) return;
+            showLoader(true);
             try {
                 await deleteDoc(doc(db, "posts", postToDelete));
-                showAlert("Post deleted successfully!", false);
+                showAlert("Post deleted.", false);
                 closePopup('deletePopup');
             } catch (err) {
                 console.error("Delete error:", err);
                 showAlert("Failed to delete post.", true);
+            } finally {
+                showLoader(false);
+                postToDelete = null;
             }
         }
 
-        function renderPost(post) {
-            const timeStr = timeAgo(post.timestamp);
-            const words = post.content.split(' ').length;
-            const needsSeeMore = words > 40;
-
-            const postEl = document.createElement('div');
-            postEl.className = 'post-container';
-            const safeContent = post.content.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-            
-            postEl.innerHTML = `
-                <div class="post">
-                    ${currentUser && currentUser.email === ADMIN_EMAIL ? `<div class="delete-btn" onclick="event.stopPropagation(); requestDeletePost('${post.id}')">×</div>` : ''}
-                    <img src="${post.imageUrl}" class="post-image" onerror="this.src='https://via.placeholder.com/800x600/e50914/white?text=Educational+Content'">
-                    <div class="post-body">
-                        <div class="post-header">
-                            <div class="post-avatar">${getInitials(ADMIN_DISPLAY_NAME)}</div>
-                            <div class="post-info">
-                                <div class="post-username">${ADMIN_DISPLAY_NAME}</div>
-                                <div class="post-time">${timeStr}</div>
-                            </div>
-                        </div>
-                        <div class="post-content ${needsSeeMore ? 'collapsed' : ''}">${needsSeeMore ? post.content.split(' ').slice(0, 40).join(' ') + '...' : post.content}</div>
-                        ${needsSeeMore ? `<div class="see-more" onclick="toggleSeeMore(this.previousElementSibling, \`${safeContent}\`)">See more</div>` : ''}
-                        <div class="stats">
-                            <div class="stat-badge" data-likes="${post.likes}">
-                                <i class="fas fa-heart"></i> ${formatLikes(post.likes)}
-                            </div>
-                        </div>
-                        <div class="post-actions">
-                            <div class="action-btn" onclick="likePost('${post.id}', this)">
-                                <i class="far fa-heart"></i>
-                                <span>Like</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            return postEl;
+        // === LIVE TAB LOGIC ===
+        async function joinLive() {
+            if (!currentUser) return;
+            try {
+                // Notify live.html that user joined
+                await setDoc(doc(db, "live_sessions", "live_room"), {
+                    active: true,
+                    joinedBy: currentUser.email,
+                    action: "joined",
+                    timestamp: serverTimestamp()
+                }, { merge: true });
+                isUserInLive = true;
+                renderLiveUI(true);
+                showAlert("Joined live session!", false);
+            } catch (err) {
+                console.error("Join live error:", err);
+                showAlert("Failed to join live.", true);
+            }
         }
 
-        function renderLiveTab(isActive, lastLiveTime) {
+        async function leaveLive() {
+            if (!currentUser) return;
+            try {
+                // Notify live.html that user left
+                await setDoc(doc(db, "live_sessions", "live_room"), {
+                    active: true,
+                    leftBy: currentUser.email,
+                    action: "left",
+                    timestamp: serverTimestamp()
+                }, { merge: true });
+                isUserInLive = false;
+                renderLiveUI(true); // Still live, but user left
+                showAlert("Left live session.", false);
+            } catch (err) {
+                console.error("Leave live error:", err);
+                showAlert("Failed to leave live.", true);
+            }
+        }
+
+        function renderLiveUI(isLive, lastLiveTime = null) {
             const liveFeed = document.getElementById('liveFeed');
-            if (isActive) {
+            if (isLive) {
                 liveFeed.innerHTML = `
                     <div class="live-container">
-                        <div id="liveVideoPlayer">🔴 LIVE NOW</div>
-                        <div class="live-info">
-                            <h3>Currently Live</h3>
-                            <p>Host: ${ADMIN_DISPLAY_NAME}</p>
-                            <button class="join-live-btn" onclick="window.location.href='live.html'">Join Live</button>
+                        <div id="liveVideoPlayer">
+                            <i class="fas fa-video fa-3x"></i>
+                            <div style="position:absolute; bottom:10px; background:rgba(0,0,0,0.6); color:white; padding:4px 12px; border-radius:20px;">
+                                🔴 LIVE
+                            </div>
                         </div>
-                    </div>
-                `;
-            } else if (lastLiveTime) {
-                liveFeed.innerHTML = `
-                    <div class="live-container">
-                        <div id="liveVideoPlayer">📹</div>
                         <div class="live-info">
-                            <h3>Last Live</h3>
-                            <p>Ended: ${timeAgo(lastLiveTime)}</p>
+                            <h3>${ADMIN_DISPLAY_NAME} is LIVE</h3>
+                            <p>Join the educational stream</p>
+                            ${isUserInLive ? 
+                                `<button class="leave-live-btn" onclick="leaveLive()">Leave Live</button>` : 
+                                `<button class="join-live-btn" onclick="joinLive()">Join Live</button>`
+                            }
                         </div>
                     </div>
                 `;
             } else {
-                liveFeed.innerHTML = `<div class="no-live">No live stream yet</div>`;
+                let message = "No live stream at the moment.";
+                if (lastLiveTime) {
+                    // lastLiveTime comes from Firestore as Timestamp
+                    message = `Last live: ${timeAgo(lastLiveTime)}`;
+                }
+                liveFeed.innerHTML = `
+                    <div class="no-live">
+                        <i class="fas fa-video-slash fa-2x" style="margin-bottom:16px;"></i>
+                        <p>${message}</p>
+                    </div>
+                `;
             }
         }
 
-        function loadPosts() {
-            const feed = document.getElementById('feed');
-            if (postsUnsub) postsUnsub();
-
-            const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
-            postsUnsub = onSnapshot(q, (snapshot) => {
-                feed.innerHTML = '';
-                if (snapshot.empty) {
-                    feed.innerHTML = '<div class="empty-feed">No posts yet</div>';
-                    return;
-                }
-
-                snapshot.docs.forEach(doc => {
-                    const data = doc.data();
-                    // Auto-increment logic: +5 every 12 hours, max 5500
-                    const baseLikes = data.likes || 500;
-                    const createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
-                    const now = new Date();
-                    const hoursElapsed = (now - createdAt) / (1000 * 60 * 60);
-                    const extraLikes = Math.min(Math.floor(hoursElapsed / 12) * 5, 5000);
-                    const currentLikes = Math.min(baseLikes + extraLikes, 5500);
-
-                    // Only update if changed
-                    if (currentLikes !== data.likes) {
-                        updateDoc(doc.ref, { likes: currentLikes }).catch(console.warn);
-                    }
-
-                    feed.appendChild(renderPost({ ...data, id: doc.id, likes: currentLikes }));
-                });
-            }, (error) => {
-                console.error("Posts load error:", error);
-                feed.innerHTML = '<div class="empty-feed">Failed to load posts</div>';
-            });
-        }
-
-        function loadLiveStatus() {
-            const sessionRef = doc(db, 'live_sessions', 'live_room');
-            if (sessionUnsub) sessionUnsub();
-            
-            sessionUnsub = onSnapshot(sessionRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    const isActive = data.active || false;
-                    const lastLive = data.endedAt || data.startedAt || null;
-                    renderLiveTab(isActive, lastLive);
-                } else {
-                    renderLiveTab(false, null);
-                }
-            }, (error) => {
-                console.error("Live status error:", error);
-                renderLiveTab(false, null);
-            });
-        }
-
-        // Tab switching
+        // === TAB SWITCHING ===
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -883,28 +870,68 @@
             });
         });
 
-        // Initialize
+        // === AUTH & REAL-TIME LISTENERS ===
         onAuthStateChanged(auth, async (user) => {
             if (!user) return window.location.href = 'login.html';
             currentUser = user;
 
-            // Set header initial to "W" for wonderland portal
-            document.getElementById('headerUserInitial').textContent = getInitials(ADMIN_DISPLAY_NAME);
+            // Set header initial
+            const userDoc = await getDoc(doc(db, 'users', user.email));
+            const username = userDoc.exists() ? userDoc.data().username : user.email.split('@')[0];
+            document.getElementById('headerUserInitial').textContent = getInitials(username);
 
             // Show post button only for admin
             if (user.email === ADMIN_EMAIL) {
                 document.getElementById('postBtn').style.display = 'flex';
             }
 
-            loadPosts();
-            loadLiveStatus();
+            // === Listen to posts in real time ===
+            if (postsUnsub) postsUnsub();
+            const postsQuery = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+            postsUnsub = onSnapshot(postsQuery, (snapshot) => {
+                const feed = document.getElementById('feed');
+                if (snapshot.empty) {
+                    feed.innerHTML = '<div class="empty-feed">No posts yet.</div>';
+                    return;
+                }
+
+                feed.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const post = { id: doc.id, ...doc.data() };
+                    feed.appendChild(renderPost(post));
+                });
+            }, (error) => {
+                console.error("Posts listener error:", error);
+                document.getElementById('feed').innerHTML = '<div class="empty-feed">Failed to load posts.</div>';
+            });
+
+            // === Listen to live session ===
+            if (sessionUnsub) sessionUnsub();
+            sessionUnsub = onSnapshot(doc(db, "live_sessions", "live_room"), (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const isLive = data.active === true;
+                    renderLiveUI(isLive, data.startedAt); // startedAt set in live.html
+                } else {
+                    renderLiveUI(false);
+                }
+            });
         });
 
-        // Cleanup listeners on page unload
+        // Cleanup on page leave
         window.addEventListener('beforeunload', () => {
             if (postsUnsub) postsUnsub();
             if (sessionUnsub) sessionUnsub();
         });
+
+        // Expose functions to global scope for inline onclick
+        window.createPost = createPost;
+        window.closePopup = closePopup;
+        window.deletePostPrompt = deletePostPrompt;
+        window.confirmDeletePost = confirmDeletePost;
+        window.likePost = likePost;
+        window.joinLive = joinLive;
+        window.leaveLive = leaveLive;
     </script>
 </body>
 </html>

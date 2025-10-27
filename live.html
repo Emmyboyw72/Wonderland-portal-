@@ -12,31 +12,15 @@
     header { display:flex; align-items:center; gap:12px; padding:14px 16px; box-shadow:0 2px 6px rgba(0,0,0,.06); position:sticky; top:0; background:white; z-index:100; }
     .back { cursor:pointer; display:flex; align-items:center; gap:8px; color:#e50914; font-weight:600; }
     .title { flex:1; text-align:center; font-weight:700; font-size:18px; color:#e50914; }
-    .controls { display:flex; gap:8px; align-items:center; }
-
     .main { padding:18px; }
 
-    #local-player, #remote-player {
-      width:100%;
-      height:360px;
-      background:#000;
-      border-radius:12px;
-      overflow:hidden;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:#999;
-    }
+    #local-player { width:100%; height:360px; background:#000; border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center; color:#999; }
 
-    .btn {
-      background:#e50914; color:#fff; padding:10px 14px; border-radius:10px; border:0; cursor:pointer; font-weight:700;
-    }
+    .btn { background:#e50914; color:#fff; padding:10px 14px; border-radius:10px; border:0; cursor:pointer; font-weight:700; }
     .btn.gray { background:#f3f3f3; color:#333; border:1px solid #eee; }
     .meta { margin-top:12px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
-
     .stat { display:flex; gap:8px; align-items:center; font-weight:600; color:#333; }
 
-    /* viewer popups stack */
     .viewer-stack {
       position:fixed;
       right:16px;
@@ -63,11 +47,7 @@
       100% { opacity: 0; transform: translateX(20px); }
     }
 
-    /* timer */
-    .timer {
-      font-family: monospace;
-      background:#111; color:#fff; padding:3px 10px; border-radius:6px; font-weight:700;
-    }
+    .timer { font-family: monospace; background:#111; color:#fff; padding:3px 10px; border-radius:6px; font-weight:700; }
 
     footer {
       position:fixed; left:0; right:0; bottom:0; background:white; display:flex; justify-content:space-around; padding:12px 0; box-shadow:0 -2px 10px rgba(0,0,0,0.06);
@@ -86,8 +66,8 @@
   <div class="main">
     <div id="local-player">Not streaming</div>
     <div class="meta">
-      <div class="stat"> <i class="fas fa-eye"></i> Views: <span id="viewsCount">0</span> </div>
-      <div class="stat"> Host: <strong id="hostEmail">—</strong> </div>
+      <div class="stat"><i class="fas fa-eye"></i> Views: <span id="viewsCount">0</span></div>
+      <div class="stat">Host: <strong id="hostEmail">—</strong></div>
       <div class="stat timer" id="liveTimer">00:00:00</div>
     </div>
 
@@ -98,13 +78,12 @@
     </div>
 
     <div style="margin-top:18px; color:#666;">
-      <div class="label-small">Note: Only <strong>admins</strong> can start or stop the live session here. Live auto-stops after 1 hour.</div>
+      <div class="label-small">Note: Only <strong>admins</strong> can start or stop the live session. Live auto-stops after 1 hour.</div>
     </div>
   </div>
 
   <div id="viewerStack" class="viewer-stack"></div>
 
-  <!-- Audio elements for notifications -->
   <audio id="joinSound" preload="auto">
     <source src="https://assets.mixkit.co/sfx/preview/mixkit-message-pop-alert-2354.mp3" type="audio/mpeg">
   </audio>
@@ -112,25 +91,14 @@
     <source src="https://assets.mixkit.co/sfx/preview/mixkit-quick-click-2301.mp3" type="audio/mpeg">
   </audio>
 
-  <!-- Firebase & Agora -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
-      getFirestore,
-      doc,
-      setDoc,
-      updateDoc,
-      onSnapshot,
-      collection,
-      getDocs,
-      deleteDoc,
-      serverTimestamp,
-      query,
-      where
+      getFirestore, doc, setDoc, updateDoc, onSnapshot, collection,
+      getDocs, deleteDoc, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Load Agora SDK
     const agoraScript = document.createElement('script');
     agoraScript.src = "https://download.agora.io/sdk/release/AgoraRTC_N.js";
     document.head.appendChild(agoraScript);
@@ -148,11 +116,9 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Agora config
     const AGORA_APP_ID = "fcfbeea054a84e529a1d984becbb4774";
     const CHANNEL_NAME = "live_room";
 
-    // UI refs
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const forceCleanBtn = document.getElementById('forceCleanBtn');
@@ -167,22 +133,17 @@
 
     backBtn.onclick = () => window.location.href = 'profile.html';
 
-    // State
     let currentUser = null;
     let client = null;
     let localTracks = { videoTrack: null, audioTrack: null };
-    let sessionUnsub = null;
-    let viewersUnsub = null;
-    let liveStopTimeout = null;
     let timerInterval = null;
+    let liveStopTimeout = null;
     let sessionStartTime = null;
-    let activeViewers = new Map(); // uid -> { username, joinedAt }
+    let warned58 = false;
 
-    // Firestore refs
     const sessionDocRef = doc(db, 'live_sessions', 'live_room');
     const viewersColRef = collection(db, 'live_sessions', 'live_room', 'viewers');
 
-    // === Helper: Format time ===
     function formatHMS(seconds) {
       const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
       const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
@@ -190,132 +151,41 @@
       return `${h}:${m}:${s}`;
     }
 
-    // === Timer ===
     function startTimer(startDate) {
       clearInterval(timerInterval);
       timerInterval = setInterval(() => {
         const diff = Math.floor((Date.now() - startDate.getTime()) / 1000);
-        liveTimerEl.textContent = formatHMS(Math.max(0, diff));
+        liveTimerEl.textContent = formatHMS(diff);
+
+        if (!warned58 && diff >= 58 * 60) {
+          warned58 = true;
+          Swal.fire({
+            icon: 'warning',
+            title: 'Almost Time!',
+            text: 'In 2 minutes, this live stream will automatically stop. You can start a new class afterwards.'
+          });
+        }
+
+        if (diff >= 60 * 60) {
+          stopLive();
+          Swal.fire({
+            icon: 'info',
+            title: 'Live Ended',
+            text: '1 hour reached. The live has automatically stopped.'
+          });
+        }
       }, 1000);
     }
 
     function stopTimer() {
       clearInterval(timerInterval);
       liveTimerEl.textContent = "00:00:00";
+      warned58 = false;
     }
 
-    // === Show viewer chip with animation ===
-    function showViewerChip(message) {
-      const chip = document.createElement('div');
-      chip.className = 'viewer-chip';
-      chip.textContent = message;
-      viewerStack.prepend(chip);
-      setTimeout(() => chip.remove(), 4000);
-    }
-
-    // === Play sound ===
-    function playSound(type) {
-      try {
-        if (type === 'join') joinSound.play().catch(() => {});
-        else if (type === 'leave') leaveSound.play().catch(() => {});
-      } catch (e) { console.warn("Sound play failed", e); }
-    }
-
-    // === Ensure session doc exists ===
-    async function ensureSessionDoc() {
-      const snap = await sessionDocRef.get();
-      if (!snap.exists()) {
-        await setDoc(sessionDocRef, {
-          active: false,
-          startedAt: null,
-          hostUid: null,
-          hostEmail: null
-        });
-      }
-    }
-
-    // === Subscribe to session ===
-    function subscribeSession() {
-      if (sessionUnsub) sessionUnsub();
-      sessionUnsub = onSnapshot(sessionDocRef, (snap) => {
-        const data = snap.exists() ? snap.data() : null;
-        if (!data || !data.active) {
-          hostEmailEl.textContent = '—';
-          viewsCountEl.textContent = '0';
-          stopTimer();
-          return;
-        }
-        hostEmailEl.textContent = data.hostEmail || '—';
-        sessionStartTime = data.startedAt?.toDate?.() || null;
-        if (sessionStartTime) startTimer(sessionStartTime);
-      });
-    }
-
-    // === Subscribe to viewers with join/leave logic ===
-    function subscribeViewers() {
-      if (viewersUnsub) viewersUnsub();
-      viewersUnsub = onSnapshot(viewersColRef, (snapshot) => {
-        const currentViewers = new Map();
-        const now = Date.now();
-
-        // Process current snapshot
-        snapshot.docs.forEach(doc => {
-          const data = doc.data();
-          const joinedAt = data.joinedAt?.toDate ? data.joinedAt.toDate().getTime() : (data.joinedAt || 0);
-          if (now - joinedAt <= 3600000) { // within 1 hour
-            currentViewers.set(doc.id, {
-              username: data.username || 'Anon',
-              joinedAt: joinedAt
-            });
-          }
-        });
-
-        // Detect joins
-        currentViewers.forEach((viewer, uid) => {
-          if (!activeViewers.has(uid)) {
-            showViewerChip(`${viewer.username} joined the live`);
-            playSound('join');
-          }
-        });
-
-        // Detect leaves
-        activeViewers.forEach((_, uid) => {
-          if (!currentViewers.has(uid)) {
-            const viewer = activeViewers.get(uid);
-            if (viewer) {
-              showViewerChip(`${viewer.username} left the live`);
-              playSound('leave');
-            }
-          }
-        });
-
-        // Update state and UI
-        activeViewers = currentViewers;
-        viewsCountEl.textContent = currentViewers.size;
-      });
-    }
-
-    // === Clean old viewers ===
-    async function cleanOldViewers() {
-      const snap = await getDocs(viewersColRef);
-      const now = Date.now();
-      const promises = [];
-      snap.docs.forEach(doc => {
-        const data = doc.data();
-        const joinedAt = data.joinedAt?.toDate ? data.joinedAt.toDate().getTime() : (data.joinedAt || 0);
-        if (!joinedAt || now - joinedAt > 3600000) {
-          promises.push(deleteDoc(doc.ref));
-        }
-      });
-      await Promise.all(promises);
-      Swal.fire({ icon: 'success', title: 'Cleaned', text: 'Old viewers removed.' });
-    }
-
-    // === Start stream ===
     async function startLocalStream() {
       if (typeof AgoraRTC === 'undefined') {
-        Swal.fire({ icon: 'error', title: 'Agora SDK not loaded', text: 'Check your internet connection.' });
-        return;
+        return Swal.fire({ icon: 'error', title: 'Agora SDK not loaded' });
       }
 
       try {
@@ -333,7 +203,6 @@
         camTrack.play(playerDiv);
         await client.publish([micTrack, camTrack]);
 
-        // Create/update session doc
         await setDoc(sessionDocRef, {
           active: true,
           startedAt: serverTimestamp(),
@@ -341,94 +210,56 @@
           hostEmail: currentUser.email
         });
 
-        // Auto-stop after 1 hour
-        if (liveStopTimeout) clearTimeout(liveStopTimeout);
-        liveStopTimeout = setTimeout(stopLive, 3600000);
-
+        sessionStartTime = new Date();
+        startTimer(sessionStartTime);
         Swal.fire({ icon: 'success', title: 'Live started', text: 'You are now live!' });
       } catch (err) {
-        console.error("Start stream error:", err);
-        Swal.fire({ icon: 'error', title: 'Failed to start', text: err.message || 'Unknown error' });
+        Swal.fire({ icon: 'error', title: 'Failed to start', text: err.message });
       }
     }
 
-    // === Stop stream ===
     async function stopLocalStreamUI() {
       try {
-        if (localTracks.videoTrack) {
-          localTracks.videoTrack.stop();
-          localTracks.videoTrack.close();
-        }
-        if (localTracks.audioTrack) {
-          localTracks.audioTrack.stop();
-          localTracks.audioTrack.close();
-        }
-        if (client) {
-          await client.unpublish(Object.values(localTracks).filter(t => t));
-          await client.leave();
-        }
-      } catch (e) { console.warn("Cleanup error:", e); }
+        if (localTracks.videoTrack) { localTracks.videoTrack.stop(); localTracks.videoTrack.close(); }
+        if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); }
+        if (client) { await client.leave(); }
+      } catch {}
       finally {
+        localPlayer.innerHTML = 'Not streaming';
         localTracks = { videoTrack: null, audioTrack: null };
         client = null;
-        localPlayer.innerHTML = 'Not streaming';
-        viewerStack.innerHTML = '';
-        activeViewers.clear();
-        if (liveStopTimeout) clearTimeout(liveStopTimeout);
       }
     }
 
     async function stopLive() {
-      await updateDoc(sessionDocRef, { active: false });
+      try {
+        await updateDoc(sessionDocRef, { active: false });
+      } catch {}
       await stopLocalStreamUI();
       stopTimer();
-      Swal.fire({ icon: 'success', title: 'Live stopped', text: 'Stream ended.' });
     }
 
-    // === Button handlers ===
     startBtn.onclick = async () => {
-      if (currentUser.email !== 'bluepay863@gmail.com') {
-        return Swal.fire({ icon: 'error', title: 'Access denied', text: 'Only admin can start live.' });
-      }
-      await startLocalStream();
+      if (currentUser.email !== 'bluepay863@gmail.com')
+        return Swal.fire({ icon: 'error', title: 'Access denied' });
+      startLocalStream();
     };
 
     stopBtn.onclick = () => {
       if (currentUser.email !== 'bluepay863@gmail.com') return;
       Swal.fire({
         title: 'Stop live?',
-        text: "Are you sure you want to end the stream?",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Yes, stop'
       }).then(res => res.isConfirmed && stopLive());
     };
 
-    forceCleanBtn.onclick = cleanOldViewers;
-
-    // === Initialize ===
-    async function init() {
-      await ensureSessionDoc(); // ✅ Automatically creates collection/doc if missing
-      subscribeSession();
-      subscribeViewers();
-    }
-
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = 'login.html';
       currentUser = user;
-      setControls(user.email === 'bluepay863@gmail.com');
-      await init();
-    });
-
-    function setControls(isAdmin) {
-      startBtn.disabled = !isAdmin;
-      stopBtn.disabled = !isAdmin;
-    }
-
-    window.addEventListener('beforeunload', async () => {
-      if (sessionUnsub) sessionUnsub();
-      if (viewersUnsub) viewersUnsub();
-      await stopLocalStreamUI();
+      startBtn.disabled = user.email !== 'bluepay863@gmail.com';
+      stopBtn.disabled = user.email !== 'bluepay863@gmail.com';
     });
   </script>
 </body>
