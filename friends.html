@@ -189,22 +189,6 @@
       flex-shrink: 0;
     }
 
-    /* Numbered unread badge */
-    .unread-badge {
-      position: absolute;
-      bottom: -8px;
-      left: 60px;
-      background: #e50914;
-      color: white;
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 10px;
-      font-weight: bold;
-      min-width: 16px;
-      text-align: center;
-      display: none;
-    }
-
     /* Floating AI Button */
     #aiFloatingBtn {
       position: fixed;
@@ -248,7 +232,7 @@
   </header>
 
   <div class="friends-list" id="friendsList">
-    <!-- Beautiful loading skeletons -->
+    <!-- Loading skeletons -->
     <div class="skeleton-loader"><div class="skeleton-avatar"></div><div class="skeleton-info"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>
     <div class="skeleton-loader"><div class="skeleton-avatar"></div><div class="skeleton-info"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>
   </div>
@@ -270,7 +254,8 @@
       serverTimestamp,
       onSnapshot,
       query,
-      orderBy
+      orderBy,
+      updateDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -353,12 +338,6 @@
       const seenClass = chat.isSentByMe && chat.seen ? 'red' : '';
       const seenIcon = chat.isSentByMe ? `<span class="seen-indicator ${seenClass}">✓✓</span>` : '';
 
-      let badgeHTML = '';
-      if (chat.isAdmin && chat.unreadCount > 0) {
-        const displayCount = chat.unreadCount > 99 ? '99+' : chat.unreadCount;
-        badgeHTML = `<div class="unread-badge">${displayCount}</div>`;
-      }
-
       item.innerHTML = `
         <div class="avatar">${getInitials(chat.name)}</div>
         <div class="friend-info">
@@ -369,7 +348,6 @@
           </div>
         </div>
         ${timeStr ? `<div class="timestamp">${timeStr}</div>` : ''}
-        ${badgeHTML}
       `;
 
       item.addEventListener('click', () => {
@@ -384,7 +362,7 @@
       activeMessageListeners.clear();
     }
 
-    function listenToMessages(chatId, uid, isAdmin) {
+    function listenToMessages(chatId, uid, chatEmail, chatName) {
       if (activeMessageListeners.has(chatId)) return;
 
       const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'desc'));
@@ -393,7 +371,6 @@
         let lastTimestamp = null;
         let isSentByMe = false;
         let seen = false;
-        let unreadCount = 0;
 
         if (!snapshot.empty) {
           const last = snapshot.docs[0].data();
@@ -402,12 +379,13 @@
           isSentByMe = last.senderUid === uid;
           seen = last.seen || false;
 
-          snapshot.docs.forEach(doc => {
-            const msg = doc.data();
-            if (msg.senderUid !== uid && !msg.seen) {
-              unreadCount++;
-            }
-          });
+          // Auto-mark as seen if incoming and not seen
+          if (!isSentByMe && !seen) {
+            updateDoc(doc(db, 'chats', chatId, 'messages', snapshot.docs[0].id), {
+              seen: true,
+              seenAt: serverTimestamp()
+            }).catch(console.error);
+          }
         }
 
         const item = document.querySelector(`.friend-item[data-chat-id="${chatId}"]`);
@@ -415,7 +393,6 @@
           const lastMsgEl = item.querySelector('.last-message');
           const timestampEl = item.querySelector('.timestamp');
           const seenIndicator = item.querySelector('.seen-indicator');
-          const badgeEl = item.querySelector('.unread-badge');
 
           if (lastMsgEl) lastMsgEl.textContent = lastMessage || 'Tap to chat';
           if (timestampEl) {
@@ -426,21 +403,19 @@
           if (seenIndicator) {
             seenIndicator.className = `seen-indicator ${isSentByMe && seen ? 'red' : ''}`;
           }
-
-          if (isAdmin && unreadCount > 0) {
-            const displayCount = unreadCount > 99 ? '99+' : unreadCount;
-            if (badgeEl) {
-              badgeEl.textContent = displayCount;
-              badgeEl.style.display = 'block';
-            } else {
-              const badge = document.createElement('div');
-              badge.className = 'unread-badge';
-              badge.textContent = displayCount;
-              item.appendChild(badge);
-            }
-          } else if (badgeEl) {
-            badgeEl.style.display = 'none';
-          }
+        } else {
+          // Re-render if missing (e.g., new chat)
+          const placeholderChat = {
+            id: chatId,
+            name: chatName,
+            email: chatEmail,
+            lastMessage,
+            lastTimestamp,
+            isSentByMe,
+            seen
+          };
+          const container = document.getElementById('friendsList');
+          container.appendChild(renderFriendItem(placeholderChat));
         }
       });
 
@@ -520,11 +495,10 @@
           lastMessage: '',
           lastTimestamp: null,
           isSentByMe: false,
-          seen: false,
-          unreadCount: 0
+          seen: false
         };
         container.appendChild(renderFriendItem(placeholderChat));
-        listenToMessages(chat.id, uid, chat.isAdmin);
+        listenToMessages(chat.id, uid, chat.email, chat.name);
       });
     }
 

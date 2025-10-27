@@ -457,13 +457,40 @@
         .btn-delete {
             background: #d32f2f;
         }
+
+        /* Loader */
+        .loader {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 300;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #e50914;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
 
     <header>
         <div class="header-title">wöndèlånd</div>
-        <a href="profile.html" class="profile-icon" id="headerUserInitial">U</a>
+        <a href="profile.html" class="profile-icon" id="headerUserInitial">W</a>
     </header>
 
     <div class="tabs">
@@ -483,13 +510,17 @@
 
     <div class="tab-content" id="liveTab">
         <div class="live-feed" id="liveFeed">
-            <!-- Live stream or status shown here -->
+            <!-- Live status shown here -->
         </div>
     </div>
 
     <div id="alert" class="alert">
         <span class="alert-icon">✨</span>
         <span id="alert-message">Action completed!</span>
+    </div>
+
+    <div id="loader" class="loader">
+        <div class="spinner"></div>
     </div>
 
     <div id="postPopup">
@@ -539,13 +570,13 @@
             collection, 
             query, 
             orderBy, 
-            getDocs, 
             addDoc, 
             serverTimestamp, 
             doc, 
             deleteDoc,
             onSnapshot,
-            updateDoc
+            updateDoc,
+            getDoc
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -563,14 +594,13 @@
 
         const ADMIN_EMAIL = "bluepay863@gmail.com";
         const ADMIN_DISPLAY_NAME = "wonderland portal";
-        const CHANNEL_NAME = "live_room";
+        const AGORA_APP_ID = "fcfbeea054a84e529a1d984becbb4774";
 
         let currentUser = null;
         let postToDelete = null;
         let likedPosts = new Set();
-        let isJoinedToLive = false;
-        let sessionUnsub = null;
         let postsUnsub = null;
+        let sessionUnsub = null;
 
         // Working educational images
         const educationKeywords = [
@@ -604,9 +634,9 @@
             if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
             if (num >= 1000) {
                 const k = num / 1000;
-                if (k < 1.1) return '1k'; // 999 -> 1k
-                if (k % 1 === 0) return k + 'k'; // 2k, 3k
-                return k.toFixed(1).replace(/\.0$/, '') + 'k'; // 1.1k, 2.5k
+                if (k < 1.1) return '1k';
+                if (k % 1 === 0) return k + 'k';
+                return k.toFixed(1).replace(/\.0$/, '') + 'k';
             }
             return num.toString();
         }
@@ -618,6 +648,10 @@
             setTimeout(() => {
                 alertEl.classList.remove('show');
             }, 6000);
+        }
+
+        function showLoader(show = true) {
+            document.getElementById('loader').style.display = show ? 'flex' : 'none';
         }
 
         function closePopup(id) {
@@ -642,9 +676,11 @@
             const content = document.getElementById('postContent').value.trim();
             if (!content) return showAlert("Post cannot be empty.", true);
 
+            showLoader(true);
             try {
                 const imageUrl = getRandomImage();
-                const baseLikes = Math.floor(Math.random() * 500) + 500;
+                // Random base likes per post (500–2000)
+                const baseLikes = Math.floor(Math.random() * 1501) + 500;
 
                 await addDoc(collection(db, "posts"), {
                     userId: currentUser.uid,
@@ -662,37 +698,38 @@
             } catch (err) {
                 console.error("Post error:", err);
                 showAlert("Failed to create post.", true);
+            } finally {
+                showLoader(false);
             }
         }
 
-        async function likePost(postId, likeBtn) {
-            if (likedPosts.has(postId)) {
-                showAlert("You already liked this post.", false);
-                return;
-            }
+                async function likePost(postId, likeBtn) {
+            // Get current like count from Firestore (not local state)
+            const postRef = doc(db, "posts", postId);
+            const postSnap = await getDoc(postRef);
+            if (!postSnap.exists()) return showAlert("Post not found.", true);
 
-            const sound = document.getElementById('likeSound');
-            sound.src = "https://assets.mixkit.co/sfx/preview/mixkit-like-tweet-2668.mp3";
-            sound.play().catch(() => {});
+            const currentData = postSnap.data();
+            const newLikes = currentData.likes + 1;
 
+            // Update in Firestore — all users see same count
+            await updateDoc(postRef, {
+                likes: newLikes
+            });
+
+            // Update UI immediately
             const statBadge = likeBtn.closest('.post').querySelector('.stat-badge');
-            let currentLikes = parseInt(statBadge.dataset.likes) || 500;
-            currentLikes += 1;
-            statBadge.dataset.likes = currentLikes;
-            statBadge.innerHTML = `<i class="fas fa-heart"></i> ${formatLikes(currentLikes)}`;
+            statBadge.dataset.likes = newLikes;
+            statBadge.innerHTML = `<i class="fas fa-heart"></i> ${formatLikes(newLikes)}`;
 
             likeBtn.querySelector('i').className = "fas fa-heart";
             likeBtn.classList.add('liked');
             likedPosts.add(postId);
 
-            // Update in Firestore
-            try {
-                await updateDoc(doc(db, "posts", postId), {
-                    likes: currentLikes
-                });
-            } catch (e) {
-                console.warn("Like update failed:", e);
-            }
+            // Play sound
+            const sound = document.getElementById('likeSound');
+            sound.src = "https://assets.mixkit.co/sfx/preview/mixkit-like-tweet-2668.mp3";
+            sound.play().catch(() => {});
 
             showAlert("Liked!", false);
         }
@@ -719,13 +756,8 @@
             const words = post.content.split(' ').length;
             const needsSeeMore = words > 40;
 
-            // Ensure username is always "wonderland portal"
-            const displayName = ADMIN_DISPLAY_NAME;
-
             const postEl = document.createElement('div');
             postEl.className = 'post-container';
-            
-            // Escape backticks for template literal
             const safeContent = post.content.replace(/`/g, '\\`').replace(/\$/g, '\\$');
             
             postEl.innerHTML = `
@@ -734,9 +766,9 @@
                     <img src="${post.imageUrl}" class="post-image" onerror="this.src='https://via.placeholder.com/800x600/e50914/white?text=Educational+Content'">
                     <div class="post-body">
                         <div class="post-header">
-                            <div class="post-avatar">${getInitials(displayName)}</div>
+                            <div class="post-avatar">${getInitials(ADMIN_DISPLAY_NAME)}</div>
                             <div class="post-info">
-                                <div class="post-username">${displayName}</div>
+                                <div class="post-username">${ADMIN_DISPLAY_NAME}</div>
                                 <div class="post-time">${timeStr}</div>
                             </div>
                         </div>
@@ -759,35 +791,32 @@
             return postEl;
         }
 
-        function renderLiveTab(isActive, hostEmail) {
+        function renderLiveTab(isActive, lastLiveTime) {
             const liveFeed = document.getElementById('liveFeed');
-            if (!isActive) {
-                liveFeed.innerHTML = `<div class="no-live">No live stream available</div>`;
-                return;
-            }
-
-            liveFeed.innerHTML = `
-                <div class="live-container">
-                    <div id="liveVideoPlayer">Live stream will appear here</div>
-                    <div class="live-info">
-                        <h3>Live Now</h3>
-                        <p>Host: ${ADMIN_DISPLAY_NAME}</p>
-                        <button class="join-live-btn" id="joinLiveBtn">${isJoinedToLive ? 'Leave Live' : 'Join Live'}</button>
+            if (isActive) {
+                liveFeed.innerHTML = `
+                    <div class="live-container">
+                        <div id="liveVideoPlayer">🔴 LIVE NOW</div>
+                        <div class="live-info">
+                            <h3>Currently Live</h3>
+                            <p>Host: ${ADMIN_DISPLAY_NAME}</p>
+                            <button class="join-live-btn" onclick="window.location.href='live.html'">Join Live</button>
+                        </div>
                     </div>
-                </div>
-            `;
-
-            document.getElementById('joinLiveBtn').onclick = () => {
-                if (isJoinedToLive) {
-                    isJoinedToLive = false;
-                    document.getElementById('joinLiveBtn').textContent = 'Join Live';
-                    showAlert("Left live stream", false);
-                } else {
-                    isJoinedToLive = true;
-                    document.getElementById('joinLiveBtn').textContent = 'Leave Live';
-                    showAlert("Joined live stream!", false);
-                }
-            };
+                `;
+            } else if (lastLiveTime) {
+                liveFeed.innerHTML = `
+                    <div class="live-container">
+                        <div id="liveVideoPlayer">📹</div>
+                        <div class="live-info">
+                            <h3>Last Live</h3>
+                            <p>Ended: ${timeAgo(lastLiveTime)}</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                liveFeed.innerHTML = `<div class="no-live">No live stream yet</div>`;
+            }
         }
 
         function loadPosts() {
@@ -804,15 +833,15 @@
 
                 snapshot.docs.forEach(doc => {
                     const data = doc.data();
-                    // Calculate real-time likes with hourly increment (max 5500)
+                    // Auto-increment logic: +5 every 12 hours, max 5500
                     const baseLikes = data.likes || 500;
                     const createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
                     const now = new Date();
                     const hoursElapsed = (now - createdAt) / (1000 * 60 * 60);
-                    const extraLikes = Math.min(Math.floor(hoursElapsed / 12) * 5, 5000); // +5 every 12 hours
+                    const extraLikes = Math.min(Math.floor(hoursElapsed / 12) * 5, 5000);
                     const currentLikes = Math.min(baseLikes + extraLikes, 5500);
 
-                    // Update Firestore if likes changed
+                    // Only update if changed
                     if (currentLikes !== data.likes) {
                         updateDoc(doc.ref, { likes: currentLikes }).catch(console.warn);
                     }
@@ -830,11 +859,17 @@
             if (sessionUnsub) sessionUnsub();
             
             sessionUnsub = onSnapshot(sessionRef, (docSnap) => {
-                const isActive = docSnap.exists() && docSnap.data().active;
-                renderLiveTab(isActive, ADMIN_DISPLAY_NAME);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const isActive = data.active || false;
+                    const lastLive = data.endedAt || data.startedAt || null;
+                    renderLiveTab(isActive, lastLive);
+                } else {
+                    renderLiveTab(false, null);
+                }
             }, (error) => {
                 console.error("Live status error:", error);
-                renderLiveTab(false, ADMIN_DISPLAY_NAME);
+                renderLiveTab(false, null);
             });
         }
 
