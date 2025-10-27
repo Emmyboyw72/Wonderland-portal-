@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Watch Live • Wonderland</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    body {
+      background: #f9f9f9;
+      color: #222;
+      padding-bottom: 0;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 100;
+    }
+    .back {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #e50914;
+      font-weight: 600;
+    }
+    .title {
+      flex: 1;
+      text-align: center;
+      font-weight: 700;
+      font-size: 18px;
+      color: #e50914;
+    }
+    .main {
+      padding: 18px;
+    }
+
+    #remote-player {
+      width: 100%;
+      height: 500px;
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 18px;
+      text-align: center;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .meta {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .host-name {
+      font-weight: 600;
+      color: #e50914;
+    }
+
+    .timer {
+      font-family: monospace;
+      background: #111;
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .offline-message {
+      color: #ff4d4d;
+      font-size: 20px;
+      line-height: 1.4;
+    }
+
+    .last-live {
+      margin-top: 16px;
+      text-align: center;
+      color: #555;
+      font-size: 14px;
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="back" id="backBtn"><i class="fas fa-arrow-left"></i> Back</div>
+    <div class="title">Live Stream</div>
+    <div style="width: 64px;"></div>
+  </header>
+
+  <div class="main">
+    <div id="remote-player">Loading stream...</div>
+
+    <div class="meta">
+      <div class="host-name">Host: wonderland portal</div>
+      <div class="timer" id="liveTimer">00:00:00</div>
+    </div>
+
+    <div id="lastLiveInfo" class="last-live" style="display: none;"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // Load Agora SDK
+    const agoraScript = document.createElement('script');
+    agoraScript.src = "https://download.agora.io/sdk/release/AgoraRTC_N.js";
+    document.head.appendChild(agoraScript);
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const AGORA_APP_ID = "fcfbeea054a84e529a1d984becbb4774";
+    const CHANNEL_NAME = "live_room";
+
+    const remotePlayer = document.getElementById('remote-player');
+    const liveTimerEl = document.getElementById('liveTimer');
+    const lastLiveInfoEl = document.getElementById('lastLiveInfo');
+    const backBtn = document.getElementById('backBtn');
+
+    backBtn.onclick = () => window.location.href = 'dashboard.html';
+
+    let client = null;
+
+    function formatHMS(totalSeconds) {
+      const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+      const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+      const s = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    }
+
+    async function initAgoraViewer() {
+      if (typeof AgoraRTC === 'undefined') return;
+      try {
+        client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        client.on("user-published", async (user, mediaType) => {
+          await client.subscribe(user, mediaType);
+          if (mediaType === "video") {
+            remotePlayer.innerHTML = '';
+            const playerDiv = document.createElement("div");
+            playerDiv.id = `player-${user.uid}`;
+            playerDiv.style.width = "100%";
+            playerDiv.style.height = "100%";
+            remotePlayer.appendChild(playerDiv);
+            user.videoTrack.play(playerDiv);
+          }
+        });
+
+        client.on("user-unpublished", (user, mediaType) => {
+          if (mediaType === "video") {
+            const playerDiv = document.getElementById(`player-${user.uid}`);
+            if (playerDiv) playerDiv.remove();
+            remotePlayer.innerHTML = '<div class="offline-message">Admin went offline</div>';
+          }
+        });
+
+        await client.join(AGORA_APP_ID, CHANNEL_NAME, null, null);
+      } catch (err) {
+        console.error("Agora viewer error:", err);
+        remotePlayer.innerHTML = '<div class="offline-message">Failed to connect to stream</div>';
+      }
+    }
+
+    function cleanupAgora() {
+      if (client) {
+        client.leave();
+        client = null;
+      }
+    }
+
+    const sessionDocRef = doc(db, 'live_sessions', 'live_room');
+    onSnapshot(sessionDocRef, (docSnap) => {
+      if (!docSnap.exists()) return;
+
+      const data = docSnap.data();
+      const isActive = data.active === true;
+
+      // Clear previous timer
+      if (window.viewerTimerCleanup) {
+        window.viewerTimerCleanup();
+        window.viewerTimerCleanup = null;
+      }
+
+      if (isActive && data.startedAt?.seconds) {
+        // LIVE MODE
+        lastLiveInfoEl.style.display = 'none';
+        remotePlayer.innerHTML = 'Connecting to live stream...';
+
+        const startTime = data.startedAt.toDate().getTime();
+        const timerInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          liveTimerEl.textContent = formatHMS(elapsed);
+        }, 1000);
+        window.viewerTimerCleanup = () => clearInterval(timerInterval);
+
+        if (!client) initAgoraViewer();
+      } else {
+        // OFFLINE MODE
+        cleanupAgora();
+        liveTimerEl.textContent = "00:00:00";
+        remotePlayer.innerHTML = '<div class="offline-message">Ooouch 🤕🤕<br>No live classes now.<br>Come back later!</div>';
+
+        // Show last live time if available
+        if (data.lastLiveStart && data.lastLiveEnd) {
+          const start = new Date(data.lastLiveStart.toDate()).toLocaleString();
+          const end = new Date(data.lastLiveEnd.toDate()).toLocaleString();
+          lastLiveInfoEl.textContent = `Last live: ${start} – ${end}`;
+          lastLiveInfoEl.style.display = 'block';
+        } else {
+          lastLiveInfoEl.style.display = 'none';
+        }
+      }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return window.location.href = 'login.html';
+    });
+
+    window.addEventListener('beforeunload', cleanupAgora);
+  </script>
+</body>
+</html>

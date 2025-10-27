@@ -190,7 +190,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
@@ -203,24 +203,6 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-
-    // 🔒 DEVICE LOCK: Prevent multiple accounts per device
-    if (localStorage.getItem('wonderland_device_registered')) {
-      Swal.fire({
-        title: '<strong>Account Already Exists</strong>',
-        html: 'Only <b>one account</b> is allowed per device.<br>Please log in or use a different device.',
-        icon: 'info',
-        confirmButtonText: 'Go to Login',
-        confirmButtonColor: '#e50914',
-        customClass: {
-          popup: 'swal2-border',
-          title: 'swal2-title-red'
-        }
-      }).then(() => {
-        window.location.href = 'login.html';
-      });
-      document.getElementById('signupForm').style.display = 'none';
-    }
 
     document.getElementById('signupForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -261,37 +243,51 @@
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
+        // Send email verification
+        await sendEmailVerification(user);
+
         // Save to Firestore under EMAIL
-        const { getFirestore, doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        const { getFirestore, doc, setDoc, collection } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
         const db = getFirestore(app);
 
+        // Create user document
         await setDoc(doc(db, "users", email), {
           uid: user.uid,
           username: username,
           email: email,
           phone: phone,
           class: userClass,
+          emailVerified: false,
           createdAt: new Date().toISOString()
         });
 
-        // Initialize friends list
+        // Auto-create friends subcollection
         await setDoc(doc(db, "friends", email, "meta", "info"), {
           initialized: true,
           createdAt: new Date().toISOString()
         });
 
-        // 🔒 Lock this device
-        localStorage.setItem('wonderland_device_registered', 'true');
-        localStorage.setItem('wonderland_user_email', email);
+        // Auto-create messages root collection entry (optional placeholder)
+        await setDoc(doc(db, "messages", email), {
+          initialized: true,
+          timestamp: new Date().toISOString()
+        });
+
+        // Auto-create liveComments if needed
+        await setDoc(doc(db, "liveComments", email), {
+          uid: user.uid,
+          username: username,
+          joinedAt: new Date().toISOString()
+        });
 
         Swal.close();
         showBeautifulAlert(
-          'Success!',
-          `Welcome, <strong>${username}</strong>!<br>Your account is ready.`,
+          'Verification Sent!',
+          `A verification link has been sent to <strong>${email}</strong>.<br>Please check your inbox and confirm your email to continue.`,
           'success',
-          'Go to Dashboard'
+          'OK'
         ).then(() => {
-          window.location.href = 'dashboard.html';
+          window.location.href = 'login.html';
         });
 
       } catch (error) {

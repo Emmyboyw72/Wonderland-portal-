@@ -24,7 +24,7 @@
     .viewer-stack {
       position:fixed;
       right:16px;
-      top:84px;
+      bottom:80px;
       z-index:1200;
       display:flex;
       flex-direction:column;
@@ -41,10 +41,10 @@
       animation: fadeInOut 4s forwards;
     }
     @keyframes fadeInOut {
-      0% { opacity: 0; transform: translateX(20px); }
-      10% { opacity: 1; transform: translateX(0); }
-      90% { opacity: 1; transform: translateX(0); }
-      100% { opacity: 0; transform: translateX(20px); }
+      0% { opacity: 0; transform: translateY(20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(20px); }
     }
 
     .timer { font-family: monospace; background:#111; color:#fff; padding:3px 10px; border-radius:6px; font-weight:700; }
@@ -71,14 +71,14 @@
       <div class="stat timer" id="liveTimer">00:00:00</div>
     </div>
 
-    <div style="margin-top:14px; display:flex; gap:10px;">
+    <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
       <button class="btn" id="startBtn">Start Live</button>
       <button class="btn gray" id="stopBtn">Stop Live</button>
       <button class="btn gray" id="forceCleanBtn">Clean Old Viewers</button>
     </div>
 
     <div style="margin-top:18px; color:#666;">
-      <div class="label-small">Note: Only <strong>admins</strong> can start or stop the live session. Live auto-stops after 1 hour.</div>
+      <div class="label-small">Note: Only <strong>admins</strong> can start or stop the live session. Live auto-stops after <strong>5000 minutes</strong>.</div>
     </div>
   </div>
 
@@ -95,10 +95,10 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
-      getFirestore, doc, setDoc, updateDoc, onSnapshot, collection,
-      getDocs, deleteDoc, serverTimestamp
+      getFirestore, doc, setDoc, updateDoc, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    // Load Agora SDK
     const agoraScript = document.createElement('script');
     agoraScript.src = "https://download.agora.io/sdk/release/AgoraRTC_N.js";
     document.head.appendChild(agoraScript);
@@ -131,58 +131,82 @@
     const joinSound = document.getElementById('joinSound');
     const leaveSound = document.getElementById('leaveSound');
 
-    backBtn.onclick = () => window.location.href = 'profile.html';
+    backBtn.onclick = () => window.location.href = 'dashboard.html';
 
     let currentUser = null;
     let client = null;
     let localTracks = { videoTrack: null, audioTrack: null };
     let timerInterval = null;
-    let liveStopTimeout = null;
     let sessionStartTime = null;
-    let warned58 = false;
+    let warned4998 = false;
 
     const sessionDocRef = doc(db, 'live_sessions', 'live_room');
-    const viewersColRef = collection(db, 'live_sessions', 'live_room', 'viewers');
 
-    function formatHMS(seconds) {
-      const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
-      const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-      const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    // Format seconds to HH:MM:SS
+    function formatHMS(totalSeconds) {
+      const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+      const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+      const s = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
       return `${h}:${m}:${s}`;
     }
 
-    function startTimer(startDate) {
+    // Start live timer
+    function startTimer() {
       clearInterval(timerInterval);
+      const start = Date.now();
       timerInterval = setInterval(() => {
-        const diff = Math.floor((Date.now() - startDate.getTime()) / 1000);
-        liveTimerEl.textContent = formatHMS(diff);
+        const elapsed = Math.floor((Date.now() - start) / 1000);
+        liveTimerEl.textContent = formatHMS(elapsed);
 
-        if (!warned58 && diff >= 58 * 60) {
-          warned58 = true;
+        // Warn at 4998 minutes (2 min before 5000)
+        if (!warned4998 && elapsed >= 4998 * 60) {
+          warned4998 = true;
           Swal.fire({
             icon: 'warning',
             title: 'Almost Time!',
-            text: 'In 2 minutes, this live stream will automatically stop. You can start a new class afterwards.'
+            text: 'In 2 minutes, this live stream will automatically stop. You can start a new session afterwards.',
+            confirmButtonText: 'OK'
           });
         }
 
-        if (diff >= 60 * 60) {
+        // Auto-stop at 5000 minutes
+        if (elapsed >= 5000 * 60) {
           stopLive();
           Swal.fire({
             icon: 'info',
             title: 'Live Ended',
-            text: '1 hour reached. The live has automatically stopped.'
+            text: '5000 minutes reached. The live has automatically stopped.',
+            confirmButtonText: 'OK'
           });
         }
       }, 1000);
     }
 
+    // Stop timer
     function stopTimer() {
       clearInterval(timerInterval);
       liveTimerEl.textContent = "00:00:00";
-      warned58 = false;
+      warned4998 = false;
     }
 
+    // Show viewer chip (TikTok style)
+    function showViewerChip(message) {
+      const chip = document.createElement('div');
+      chip.className = 'viewer-chip';
+      chip.textContent = message;
+      viewerStack.prepend(chip);
+      setTimeout(() => chip.remove(), 4000);
+    }
+
+    // Play sound
+    function playSound(type) {
+      try {
+        if (type === 'join') joinSound.play().catch(() => {});
+        else if (type === 'leave') leaveSound.play().catch(() => {});
+      } catch (e) { console.warn("Sound play failed", e); }
+    }
+
+    // Start Agora stream
     async function startLocalStream() {
       if (typeof AgoraRTC === 'undefined') {
         return Swal.fire({ icon: 'error', title: 'Agora SDK not loaded' });
@@ -190,7 +214,7 @@
 
       try {
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        const uid = await client.join(AGORA_APP_ID, CHANNEL_NAME, null, null);
+        await client.join(AGORA_APP_ID, CHANNEL_NAME, null, null);
         const [micTrack, camTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
         localTracks.audioTrack = micTrack;
         localTracks.videoTrack = camTrack;
@@ -203,27 +227,34 @@
         camTrack.play(playerDiv);
         await client.publish([micTrack, camTrack]);
 
+        // Reset session in Firestore — include lastStoppedAt for history
         await setDoc(sessionDocRef, {
           active: true,
           startedAt: serverTimestamp(),
+          lastStoppedAt: null, // Clear when starting
           hostUid: currentUser.uid,
-          hostEmail: currentUser.email
+          hostEmail: currentUser.email,
+          viewers: [],
+          viewerCount: 0
         });
 
         sessionStartTime = new Date();
-        startTimer(sessionStartTime);
-        Swal.fire({ icon: 'success', title: 'Live started', text: 'You are now live!' });
+        startTimer();
+        Swal.fire({ icon: 'success', title: 'Live started!', text: 'You are now live!' });
       } catch (err) {
-        Swal.fire({ icon: 'error', title: 'Failed to start', text: err.message });
+        console.error("Agora error:", err);
+        Swal.fire({ icon: 'error', title: 'Failed to start', text: err.message || 'Unknown error' });
+        await stopLocalStreamUI();
       }
     }
 
+    // Stop local stream
     async function stopLocalStreamUI() {
       try {
         if (localTracks.videoTrack) { localTracks.videoTrack.stop(); localTracks.videoTrack.close(); }
         if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); }
         if (client) { await client.leave(); }
-      } catch {}
+      } catch (e) { console.error("Stop stream error:", e); }
       finally {
         localPlayer.innerHTML = 'Not streaming';
         localTracks = { videoTrack: null, audioTrack: null };
@@ -231,35 +262,94 @@
       }
     }
 
+    // ✅ CRITICAL: Stop live AND record lastStoppedAt
     async function stopLive() {
       try {
-        await updateDoc(sessionDocRef, { active: false });
-      } catch {}
+        // Update Firestore with stop time
+        await updateDoc(sessionDocRef, {
+          active: false,
+          lastStoppedAt: serverTimestamp(), // ← This enables "Last Live" on dashboard
+          viewerCount: 0,
+          viewers: []
+        });
+      } catch (e) {
+        console.error("Update session error:", e);
+      }
       await stopLocalStreamUI();
       stopTimer();
+      viewsCountEl.textContent = '0';
     }
 
+    // === BUTTON HANDLERS ===
     startBtn.onclick = async () => {
-      if (currentUser.email !== 'bluepay863@gmail.com')
-        return Swal.fire({ icon: 'error', title: 'Access denied' });
+      if (currentUser?.email !== 'bluepay863@gmail.com') {
+        return Swal.fire({ icon: 'error', title: 'Access Denied', text: 'Only admin can start live.' });
+      }
       startLocalStream();
     };
 
     stopBtn.onclick = () => {
-      if (currentUser.email !== 'bluepay863@gmail.com') return;
+      if (currentUser?.email !== 'bluepay863@gmail.com') return;
       Swal.fire({
         title: 'Stop live?',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, stop'
+        confirmButtonText: 'Yes, stop',
+        confirmButtonColor: '#e50914'
       }).then(res => res.isConfirmed && stopLive());
     };
 
+    forceCleanBtn.onclick = async () => {
+      try {
+        await updateDoc(sessionDocRef, { viewers: [], viewerCount: 0 });
+        viewsCountEl.textContent = '0';
+        Swal.fire('Cleaned', 'Viewer list cleared.', 'success');
+      } catch (err) {
+        Swal.fire('Error', 'Failed to clean.', 'error');
+      }
+    };
+
+    // === AUTH & REAL-TIME LISTENER ===
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = 'login.html';
       currentUser = user;
-      startBtn.disabled = user.email !== 'bluepay863@gmail.com';
-      stopBtn.disabled = user.email !== 'bluepay863@gmail.com';
+
+      // Enable buttons only for admin
+      const isAdmin = user.email === 'bluepay863@gmail.com';
+      startBtn.disabled = !isAdmin;
+      stopBtn.disabled = !isAdmin;
+
+      // Listen to live session
+      onSnapshot(sessionDocRef, (docSnap) => {
+        if (!docSnap.exists()) {
+          // Auto-create if missing
+          setDoc(sessionDocRef, {
+            active: false,
+            hostEmail: "",
+            viewerCount: 0,
+            viewers: [],
+            lastStoppedAt: null
+          });
+          return;
+        }
+
+        const data = docSnap.data();
+        hostEmailEl.textContent = data.hostEmail || '—';
+        viewsCountEl.textContent = data.viewerCount || 0;
+
+        // Auto-stop UI if stream ended remotely
+        if (!data.active && localTracks.videoTrack) {
+          stopLocalStreamUI();
+          stopTimer();
+        }
+      });
+    });
+
+    // Cleanup on unload
+    window.addEventListener('beforeunload', async () => {
+      // Optional: auto-stop if admin closes tab
+      // await stopLive();
+      await stopLocalStreamUI();
     });
   </script>
 </body>

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>wöndèlånd chat</title>
-  <script src="https://cdn.jsdelivr.com/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     /* 🔒 Prevent ALL text selection */
@@ -155,22 +155,6 @@
       flex-shrink: 0;
     }
 
-    /* Numbered unread badge */
-    .unread-badge {
-      position: absolute;
-      bottom: -8px;
-      left: 60px;
-      background: #e50914;
-      color: white;
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 10px;
-      font-weight: bold;
-      min-width: 16px;
-      text-align: center;
-      display: none;
-    }
-
     /* Floating AI Button */
     #aiFloatingBtn {
       position: fixed;
@@ -199,14 +183,6 @@
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
     }
-
-    #friendsList:empty::before {
-      content: "Loading chats...";
-      display: block;
-      text-align: center;
-      padding: 30px;
-      color: #999;
-    }
   </style>
 </head>
 <body>
@@ -222,7 +198,7 @@
   </header>
 
   <div class="friends-list" id="friendsList">
-    <!-- Chats rendered here -->
+    <!-- Chats will appear here -->
   </div>
 
   <div id="aiFloatingBtn">
@@ -242,8 +218,7 @@
       serverTimestamp,
       onSnapshot,
       query,
-      orderBy,
-      where
+      orderBy
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -263,6 +238,8 @@
     const ADMIN_DISPLAY_NAME = "wonderland portal";
 
     let currentUser = null;
+    let loaderShown = false;
+    let dataLoaded = false;
     const activeMessageListeners = new Map();
 
     function getInitials(name) {
@@ -326,12 +303,6 @@
       const seenClass = chat.isSentByMe && chat.seen ? 'red' : '';
       const seenIcon = chat.isSentByMe ? `<span class="seen-indicator ${seenClass}">✓✓</span>` : '';
 
-      let badgeHTML = '';
-      if (chat.isAdmin && chat.unreadCount > 0) {
-        const displayCount = chat.unreadCount > 99 ? '99+' : chat.unreadCount;
-        badgeHTML = `<div class="unread-badge">${displayCount}</div>`;
-      }
-
       item.innerHTML = `
         <div class="avatar">${getInitials(chat.name)}</div>
         <div class="friend-info">
@@ -342,7 +313,6 @@
           </div>
         </div>
         ${timeStr ? `<div class="timestamp">${timeStr}</div>` : ''}
-        ${badgeHTML}
       `;
 
       item.addEventListener('click', () => {
@@ -357,7 +327,7 @@
       activeMessageListeners.clear();
     }
 
-    function listenToMessages(chatId, uid, isAdmin, isSelf, email) {
+    function listenToMessages(chatId, uid) {
       if (activeMessageListeners.has(chatId)) return;
 
       const msgRef = collection(db, 'chats', chatId, 'messages');
@@ -368,7 +338,6 @@
         let lastTimestamp = null;
         let isSentByMe = false;
         let seen = false;
-        let unreadCount = 0;
 
         if (!snapshot.empty) {
           const last = snapshot.docs[0].data();
@@ -376,13 +345,6 @@
           lastTimestamp = last.timestamp;
           isSentByMe = last.senderUid === uid;
           seen = last.seen || false;
-
-          snapshot.docs.forEach(doc => {
-            const msg = doc.data();
-            if (msg.senderUid !== uid && !msg.seen) {
-              unreadCount++;
-            }
-          });
         }
 
         const item = document.querySelector(`.friend-item[data-chat-id="${chatId}"]`);
@@ -390,7 +352,6 @@
           const lastMsgEl = item.querySelector('.last-message');
           const timestampEl = item.querySelector('.timestamp');
           const seenIndicator = item.querySelector('.seen-indicator');
-          const badgeEl = item.querySelector('.unread-badge');
 
           if (lastMsgEl) lastMsgEl.textContent = lastMessage || 'Tap to chat';
           if (timestampEl) {
@@ -398,28 +359,10 @@
               ? lastTimestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
               : '';
           }
-
           if (seenIndicator) {
             seenIndicator.className = `seen-indicator ${isSentByMe && seen ? 'red' : ''}`;
           }
-
-          if (isAdmin && unreadCount > 0) {
-            const displayCount = unreadCount > 99 ? '99+' : unreadCount;
-            if (badgeEl) {
-              badgeEl.textContent = displayCount;
-              badgeEl.style.display = 'block';
-            } else {
-              const badge = document.createElement('div');
-              badge.className = 'unread-badge';
-              badge.textContent = displayCount;
-              item.appendChild(badge);
-            }
-          } else {
-            if (badgeEl) badgeEl.style.display = 'none';
-          }
         }
-      }, (error) => {
-        console.warn("Message listener error:", error);
       });
 
       activeMessageListeners.set(chatId, unsubscribe);
@@ -429,23 +372,30 @@
       const container = document.getElementById('friendsList');
       const uid = user.uid;
 
-      // Show loading
-      Swal.fire({
-        title: 'Loading chats...',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        didOpen: () => Swal.showLoading(),
-        customClass: {
-          popup: 'swal2-border-red'
-        }
-      });
+      // Show loader if not already shown
+      if (!loaderShown) {
+        loaderShown = true;
+        Swal.fire({
+          title: 'Loading chats...',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => Swal.showLoading(),
+          customClass: {
+            popup: 'swal2-border-red'
+          }
+        });
+      }
 
       cleanupListeners();
 
       const chatsQuery = query(collection(db, 'chats'));
       const unsubscribe = onSnapshot(chatsQuery, async (snapshot) => {
         const chatList = [];
-        const userDocs = await getDocs(collection(db, 'users'));
+        const userDocs = new Map();
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        usersSnapshot.forEach(doc => {
+          userDocs.set(doc.data().uid, doc.data());
+        });
 
         for (const docSnap of snapshot.docs) {
           const chatData = docSnap.data();
@@ -463,18 +413,13 @@
             isAdmin = true;
           } else {
             const otherUid = chatData.participants.find(id => id !== uid);
-            if (otherUid) {
-              let found = null;
-              userDocs.forEach(u => {
-                if (u.data().uid === otherUid) found = u.data();
-              });
-              if (found) {
-                name = found.username || found.email.split('@')[0];
-                email = found.email;
-              } else {
-                name = 'User';
-                email = 'unknown';
-              }
+            if (otherUid && userDocs.has(otherUid)) {
+              const userData = userDocs.get(otherUid);
+              name = userData.username || userData.email.split('@')[0];
+              email = userData.email;
+            } else {
+              name = 'User';
+              email = 'unknown';
             }
           }
 
@@ -492,7 +437,7 @@
           if (b.isSelf) return 1;
           if (a.isAdmin) return -1;
           if (b.isAdmin) return 1;
-          return 0;
+          return a.name.localeCompare(b.name);
         });
 
         container.innerHTML = '';
@@ -502,19 +447,29 @@
             lastMessage: '',
             lastTimestamp: null,
             isSentByMe: false,
-            seen: false,
-            unreadCount: 0
+            seen: false
           };
           container.appendChild(renderFriendItem(placeholderChat));
-          listenToMessages(chat.id, uid, chat.isAdmin, chat.isSelf, chat.email);
+          listenToMessages(chat.id, uid);
         });
 
-        // Close loading
-        Swal.close();
+        // Mark data as loaded
+        dataLoaded = true;
+        maybeCloseLoader();
       }, (error) => {
         Swal.close();
+        console.error("Chats load error:", error);
         Swal.fire('Error', 'Failed to load chats.', 'error');
       });
+    }
+
+    function maybeCloseLoader() {
+      // Keep loader visible for at least 800ms for UX
+      setTimeout(() => {
+        if (loaderShown && dataLoaded) {
+          Swal.close();
+        }
+      }, 800);
     }
 
     onAuthStateChanged(auth, async (user) => {
