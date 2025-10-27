@@ -1,405 +1,620 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chat – wöndèlånd</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            user-select: none;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Chat – wöndèlånd</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    html { touch-action: manipulation; }
+    body {
+      -webkit-text-size-adjust: 100%;
+      -moz-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      user-select: none;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
 
-        body {
-            background: #f0f2f5;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
+    header {
+      background: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      z-index: 100;
+      position: relative;
+    }
 
-        header {
-            background: white;
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            z-index: 100;
-        }
+    .back-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e50914;
+      font-size: 20px;
+      cursor: pointer;
+    }
 
-        .back-btn {
-            margin-right: 12px;
-            color: #e50914;
-            font-size: 20px;
-            cursor: pointer;
-        }
+    .chat-header {
+      flex: 1;
+      text-align: center;
+      font-weight: bold;
+      font-size: 18px;
+      color: #333;
+    }
 
-        .chat-header {
-            flex: 1;
-        }
+    .call-buttons {
+      display: flex;
+      gap: 12px;
+    }
 
-        .peer-name {
-            font-weight: bold;
-            color: #333;
-            font-size: 18px;
-        }
+    .call-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #f0f2f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e50914;
+      cursor: pointer;
+    }
 
-        .typing-indicator {
-            font-size: 13px;
-            color: #888;
-            margin-top: 2px;
-        }
+    /* Hide call buttons in self-chat */
+    .call-buttons.hidden {
+      display: none;
+    }
 
-        .call-buttons {
-            display: flex;
-            gap: 12px;
-        }
+    .messages-container {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
 
-        .call-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: #f0f2f5;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #e50914;
-            cursor: pointer;
-        }
+    .message, .call-log, .deleted-message {
+      max-width: 60%;
+      padding: 7px 11px;
+      border-radius: 16px;
+      font-size: 14px;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
 
-        .messages-container {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
+    .sent {
+      background: #dcf8c6;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
 
-        .message {
-            max-width: 70%;
-            padding: 10px 14px;
-            border-radius: 18px;
-            position: relative;
-            word-break: break-word;
-        }
+    .received {
+      background: white;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
 
-        .sent {
-            background: #dcf8c6;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
+    .reply-preview {
+      font-size: 12px;
+      color: #555;
+      margin-bottom: 3px;
+      font-style: italic;
+      border-left: 2px solid #ccc;
+      padding-left: 6px;
+    }
 
-        .received {
-            background: white;
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
+    .call-log {
+      background: #e9ecef;
+      color: #495057;
+      text-align: center;
+      align-self: center;
+      max-width: 70%;
+      border-radius: 12px;
+      font-size: 13px;
+      padding: 6px;
+    }
 
-        .message-time {
-            font-size: 10px;
-            color: #999;
-            text-align: right;
-            margin-top: 4px;
-        }
+    .deleted-message {
+      font-style: italic;
+      color: #999;
+      text-align: center;
+      align-self: center;
+      max-width: 80%;
+      font-size: 13px;
+    }
 
-        .seen-indicator {
-            color: #e50914;
-            font-size: 12px;
-            font-weight: bold;
-            margin-left: 4px;
-        }
+    .message-meta {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 2px;
+      font-size: 10px;
+      color: #999;
+    }
 
-        .input-area {
-            display: flex;
-            padding: 8px 12px;
-            background: white;
-            border-top: 1px solid #e0e0e0;
-        }
+    .seen-indicator {
+      color: #999;
+      margin-left: 4px;
+    }
 
-        #messageInput {
-            flex: 1;
-            border: none;
-            outline: none;
-            font-size: 16px;
-            padding: 10px;
-            background: #f0f2f5;
-            border-radius: 20px;
-        }
+    .seen-indicator.red {
+      color: #e50914;
+    }
 
-        #sendBtn {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: #e50914;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-left: 10px;
-            cursor: pointer;
-        }
+    .input-area {
+      display: flex;
+      padding: 8px 12px;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+      align-items: center;
+      gap: 8px;
+    }
 
-        .alert {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.9);
-            padding: 20px 24px;
-            border-radius: 16px;
-            color: white;
-            font-weight: bold;
-            z-index: 1000;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            opacity: 0;
-            transition: opacity 0.3s;
-            text-align: center;
-            max-width: 90%;
-            font-size: 16px;
-        }
+    #emojiBtn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #f0f2f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #555;
+      cursor: pointer;
+    }
 
-        .alert.show {
-            opacity: 1;
-        }
+    #messageInput {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      padding: 9px;
+      background: #f0f2f5;
+      border-radius: 20px;
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      user-select: text;
+    }
 
-        .alert-success {
-            background: linear-gradient(135deg, #00c853, #007e33);
-        }
+    #sendBtn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #e50914;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
 
-        .alert-error {
-            background: linear-gradient(135deg, #d32f2f, #b71c1c);
-        }
-    </style>
+    #emojiPicker {
+      position: fixed;
+      bottom: 68px;
+      left: 10px;
+      right: 10px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+      z-index: 200;
+      display: none;
+      max-height: 180px;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 6px;
+    }
+
+    .emoji-item {
+      font-size: 20px;
+      text-align: center;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+    }
+
+    .emoji-item:hover {
+      background: #f0f2f5;
+    }
+  </style>
 </head>
 <body>
 
-    <header>
-        <div class="back-btn" onclick="window.history.back()">
-            <i class="fas fa-arrow-left"></i>
-        </div>
-        <div class="chat-header">
-            <div class="peer-name" id="peerName">Loading...</div>
-            <div class="typing-indicator" id="typingIndicator" style="display:none;">Typing...</div>
-        </div>
-        <div class="call-buttons">
-            <div class="call-btn" onclick="startAudioCall()">
-                <i class="fas fa-phone"></i>
-            </div>
-            <div class="call-btn" onclick="startVideoCall()">
-                <i class="fas fa-video"></i>
-            </div>
-        </div>
-    </header>
-
-    <div class="messages-container" id="messagesContainer">
-        <!-- Messages loaded here -->
+  <header>
+    <div class="back-btn" id="backBtn">
+      <i class="fas fa-arrow-left"></i>
     </div>
-
-    <div class="input-area">
-        <input type="text" id="messageInput" placeholder="Type a message" />
-        <div id="sendBtn" onclick="sendMessage()">
-            <i class="fas fa-paper-plane"></i>
-        </div>
+    <div class="chat-header" id="peerName">Loading...</div>
+    <div class="call-buttons" id="callButtons">
+      <div class="call-btn" id="audioCallBtn">
+        <i class="fas fa-phone"></i>
+      </div>
+      <div class="call-btn" id="videoCallBtn">
+        <i class="fas fa-video"></i>
+      </div>
     </div>
+  </header>
 
-    <div id="alert" class="alert">
-        <span id="alert-message">Message sent!</span>
+  <div class="messages-container" id="messagesContainer">
+    <div style="text-align:center; color:#999; padding:20px;">Loading messages...</div>
+  </div>
+
+  <div class="input-area">
+    <div id="emojiBtn">
+      <i class="far fa-smile"></i>
     </div>
+    <input type="text" id="messageInput" placeholder="Type a message" />
+    <div id="sendBtn">
+      <i class="fas fa-paper-plane"></i>
+    </div>
+  </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { 
-            getFirestore, 
-            collection, 
-            doc, 
-            getDoc, 
-            setDoc, 
-            addDoc, 
-            serverTimestamp, 
-            onSnapshot,
-            updateDoc,
-            query,
-            orderBy,
-            where,
-            arrayUnion
-        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  <div id="emojiPicker">
+    <div class="emoji-grid" id="emojiGrid"></div>
+  </div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
-            authDomain: "emmy-programmers.firebaseapp.com",
-            projectId: "emmy-programmers",
-            storageBucket: "emmy-programmers.firebasestorage.app",
-            messagingSenderId: "351752440867",
-            appId: "1:351752440867:web:1f65d8c922d3d48e063596"
-        };
+  <audio id="callSound" preload="auto">
+    <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav" type="audio/wav">
+  </audio>
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+  <script type="module">
+    // 🔥 FIXED: Removed trailing spaces in URLs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      getDoc, 
+      setDoc, 
+      addDoc, 
+      serverTimestamp, 
+      onSnapshot,
+      query,
+      orderBy,
+      where,
+      updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        let currentUser = null;
-        let peerId = null;
-        let peerName = null;
-        let chatId = null;
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+    };
 
-        function showAlert(message, isError = false) {
-            const alertEl = document.getElementById('alert');
-            alertEl.textContent = message;
-            alertEl.className = `alert ${isError ? 'alert-error' : 'alert-success'} show`;
-            setTimeout(() => alertEl.classList.remove('show'), 4000);
-        }
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-        function formatTime(timestamp) {
-            if (!timestamp?.toDate) return '';
-            const date = timestamp.toDate();
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
+    let currentUserData = null;
+    let peerEmail = null;
+    let peerName = null;
+    let peerUid = null;
+    let chatId = null;
+    let isSelfChat = false; // 🔑 Track if it's "Saved Messages"
 
-        // Ensure friend exists (auto-add if not)
-        async function ensureFriendExists(peerId, peerEmail) {
-            const friendRef = doc(db, 'friends', currentUser.uid, 'list', peerId);
-            const friendSnap = await getDoc(friendRef);
-            if (!friendSnap.exists()) {
-                // Add to friends
-                await setDoc(friendRef, {
-                    userId: peerId,
-                    email: peerEmail,
-                    username: peerEmail.split('@')[0],
-                    addedAt: serverTimestamp()
-                });
-                // Also add reverse (optional)
-                await setDoc(doc(db, 'friends', peerId, 'list', currentUser.uid), {
-                    userId: currentUser.uid,
-                    email: currentUser.email,
-                    username: currentUser.email.split('@')[0],
-                    addedAt: serverTimestamp()
-                });
-            }
-        }
+    const EMOJIS = [
+      '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
+      '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚',
+      '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩',
+      '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
+      '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬',
+      '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗',
+      '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯',
+      '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐',
+      '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈',
+      '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾',
+      '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿',
+      '😾', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎',
+      '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟',
+      '💯', '🔥', '✨', '🌟', '⭐', '🌈', '☀️', '🌙', '🎉', '🎊',
+      '👍', '👎', '👏', '🙌', '👌', '✌️', '🤟', '🤘', '👋', '🤙'
+    ];
 
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
-            if (!text) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    peerEmail = urlParams.get('peer');
+    peerName = urlParams.get('name') || peerEmail?.split('@')[0] || 'User';
 
-            try {
-                await addDoc(collection(db, 'chats', chatId, 'messages'), {
-                    text: text,
-                    sender: currentUser.uid,
-                    timestamp: serverTimestamp(),
-                    seenBy: [] // will be updated when read
-                });
-                input.value = '';
-            } catch (err) {
-                console.error("Send error:", err);
-                showAlert("Failed to send.", true);
-            }
-        }
+    if (!peerEmail) {
+      Swal.fire({ title: 'Error', text: 'Invalid chat link.', icon: 'error', confirmButtonColor: '#e50914' }).then(() => {
+        window.location.href = 'friends.html';
+      });
+    }
 
-        function startAudioCall() {
-            window.location.href = `audio-call.html?peer=${peerId}&name=${encodeURIComponent(peerName)}`;
-        }
+    document.getElementById('peerName').textContent = peerName;
 
-        function startVideoCall() {
-            window.location.href = `video-call.html?peer=${peerId}&name=${encodeURIComponent(peerName)}`;
-        }
+    // === EMOJI PICKER ===
+    const emojiPicker = document.getElementById('emojiPicker');
+    const emojiGrid = document.getElementById('emojiGrid');
+    const emojiBtn = document.getElementById('emojiBtn');
+    const messageInput = document.getElementById('messageInput');
+    const callSound = document.getElementById('callSound');
+    const callButtons = document.getElementById('callButtons');
 
-        function renderMessage(msg, isSent) {
-            const msgEl = document.createElement('div');
-            msgEl.className = `message ${isSent ? 'sent' : 'received'}`;
-            msgEl.innerHTML = `
-                ${msg.text}
-                <div class="message-time">
-                    ${formatTime(msg.timestamp)}
-                    ${!isSent && msg.seenBy?.includes(currentUser.uid) ? '<span class="seen-indicator">✓✓</span>' : ''}
-                </div>
-            `;
-            return msgEl;
-        }
-
-        function scrollToBottom() {
-            const container = document.getElementById('messagesContainer');
-            container.scrollTop = container.scrollHeight;
-        }
-
-        async function loadMessages() {
-            const messagesRef = collection(db, 'chats', chatId, 'messages');
-            const q = query(messagesRef, orderBy('timestamp', 'asc'));
-            onSnapshot(q, (snapshot) => {
-                const container = document.getElementById('messagesContainer');
-                container.innerHTML = '';
-                snapshot.docChanges().forEach(change => {
-                    if (change.type === "added") {
-                        const msg = change.doc.data();
-                        const isSent = msg.sender === currentUser.uid;
-                        container.appendChild(renderMessage(msg, isSent));
-                    }
-                });
-                scrollToBottom();
-
-                // Mark last received messages as seen
-                const lastReceived = snapshot.docs
-                    .filter(d => d.data().sender !== currentUser.uid && !d.data().seenBy?.includes(currentUser.uid))
-                    .pop();
-                if (lastReceived) {
-                    updateDoc(doc(db, 'chats', chatId, 'messages', lastReceived.id), {
-                        seenBy: arrayUnion(currentUser.uid)
-                    });
-                }
+    EMOJIS.forEach(emoji => {
+      const span = document.createElement('span');
+      span.className = 'emoji-item';
+      span.textContent = emoji;
+      span.addEventListener('click', async () => {
+        if (currentUserData && peerUid) {
+          try {
+            await addDoc(collection(db, 'chats', chatId, 'messages'), {
+              text: emoji,
+              senderUid: currentUserData.uid,
+              senderName: currentUserData.username,
+              receiverUid: peerUid,
+              timestamp: serverTimestamp(),
+              type: 'text'
             });
+          } catch (err) {
+            Swal.fire({ title: 'Error', text: 'Failed to send emoji.', icon: 'error', confirmButtonColor: '#e50914' });
+          }
+        }
+        emojiPicker.style.display = 'none';
+      });
+      emojiGrid.appendChild(span);
+    });
+
+    emojiBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!emojiBtn.contains(e.target) && !emojiPicker.contains(e.target)) {
+        emojiPicker.style.display = 'none';
+      }
+    });
+
+    // === NAVIGATION ===
+    document.getElementById('backBtn').addEventListener('click', () => window.location.href = 'friends.html');
+
+    // Call buttons - will be hidden for self-chat
+    document.getElementById('audioCallBtn').addEventListener('click', () => window.location.href = `audio-call.html?peer=${encodeURIComponent(peerEmail)}&name=${encodeURIComponent(peerName)}`);
+    document.getElementById('videoCallBtn').addEventListener('click', () => window.location.href = `video-call.html?peer=${encodeURIComponent(peerEmail)}&name=${encodeURIComponent(peerName)}`);
+
+    // === SEND MESSAGE ===
+    async function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text || !currentUserData || !peerUid) return;
+
+      const replyTo = JSON.parse(sessionStorage.getItem('replyTo') || 'null');
+
+      try {
+        await addDoc(collection(db, 'chats', chatId, 'messages'), {
+          text: text,
+          senderUid: currentUserData.uid,
+          senderName: currentUserData.username,
+          receiverUid: peerUid,
+          timestamp: serverTimestamp(),
+          type: 'text',
+          ...(replyTo ? { replyTo } : {})
+        });
+        messageInput.value = '';
+        sessionStorage.removeItem('replyTo');
+        messageInput.placeholder = 'Type a message';
+      } catch (err) {
+        console.error("Send error:", err);
+        Swal.fire({ title: 'Error', text: 'Failed to send message.', icon: 'error', confirmButtonColor: '#e50914' });
+      }
+    }
+
+    document.getElementById('sendBtn').addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // === RENDER MESSAGE ===
+    function renderMessage(data, id) {
+      if (data.type === 'callLog') {
+        const el = document.createElement('div');
+        el.className = 'call-log';
+        const type = data.callType === 'video' ? 'Video' : 'Audio';
+        const status = data.status === 'answered' ? 'Answered' : 'Missed';
+        const time = data.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        el.textContent = `${status} ${type} Call • ${time}`;
+        return el;
+      }
+
+      if (data.type === 'deleted') {
+        const el = document.createElement('div');
+        el.className = 'deleted-message';
+        const text = data.senderUid === currentUserData.uid
+          ? 'You deleted this message for everyone'
+          : `${data.senderName} deleted this message for everyone`;
+        el.textContent = text;
+        return el;
+      }
+
+      const isSent = data.senderUid === currentUserData.uid;
+      const el = document.createElement('div');
+      el.className = `message ${isSent ? 'sent' : 'received'}`;
+
+      let content = '';
+      if (data.replyTo) {
+        content += `<div class="reply-preview">${data.replyTo.text}</div>`;
+      }
+      const time = data.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const seenIcon = isSent ? `<span class="seen-indicator ${data.seen ? 'red' : ''}">✓✓</span>` : '';
+
+      content += `${data.text}<div class="message-meta">${time} ${seenIcon}</div>`;
+      el.innerHTML = content;
+
+      // Mark received messages as seen
+      if (!isSent && !data.seen) {
+        updateDoc(doc(db, 'chats', chatId, 'messages', id), { seen: true });
+      }
+
+      // Long press to reply (received)
+      if (!isSent) {
+        let timer;
+        const start = () => timer = setTimeout(() => {
+          sessionStorage.setItem('replyTo', JSON.stringify({ text: data.text, senderName: data.senderName }));
+          messageInput.placeholder = `Replying to ${data.senderName}...`;
+          messageInput.focus();
+        }, 500);
+        const cancel = () => clearTimeout(timer);
+        el.addEventListener('mousedown', start);
+        el.addEventListener('touchstart', start);
+        ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev => el.addEventListener(ev, cancel));
+      }
+
+      // Long press to delete (sent)
+      if (isSent) {
+        let timer;
+        const start = () => timer = setTimeout(async () => {
+          const result = await Swal.fire({
+            title: 'Delete for everyone?',
+            text: "This will delete the message for both of you.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e50914',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Delete'
+          });
+          if (result.isConfirmed) {
+            try {
+              await setDoc(doc(db, 'chats', chatId, 'messages', id), {
+                type: 'deleted',
+                senderUid: currentUserData.uid,
+                senderName: currentUserData.username,
+                timestamp: serverTimestamp()
+              });
+            } catch (err) {
+              Swal.fire({ title: 'Error', text: 'Deletion failed.', icon: 'error', confirmButtonColor: '#e50914' });
+            }
+          }
+        }, 500);
+        const cancel = () => clearTimeout(timer);
+        el.addEventListener('mousedown', start);
+        el.addEventListener('touchstart', start);
+        ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev => el.addEventListener(ev, cancel));
+      }
+
+      return el;
+    }
+
+    // === LOAD MESSAGES + CALL LOGS ===
+    function loadChatData() {
+      const container = document.getElementById('messagesContainer');
+
+      const messagesUnsub = onSnapshot(
+        query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc')),
+        (snapshot) => {
+          const messages = {};
+          snapshot.forEach(doc => {
+            messages[doc.id] = { id: doc.id, ...doc.data() };
+          });
+          renderAll(container, messages);
+        }
+      );
+
+      const callLogsUnsub = onSnapshot(
+        query(collection(db, 'callLogs'), where('chatId', '==', chatId), orderBy('timestamp', 'asc')),
+        (snapshot) => {
+          const messages = {};
+          const messagesSnap = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
+          onSnapshot(messagesSnap, (msgSnap) => {
+            msgSnap.forEach(doc => {
+              messages[doc.id] = { id: doc.id, ...doc.data() };
+            });
+            snapshot.forEach(doc => {
+              messages[`call_${doc.id}`] = { id: `call_${doc.id}`, type: 'callLog', ...doc.data() };
+            });
+            renderAll(container, messages);
+          });
+        }
+      );
+    }
+
+    function renderAll(container, items) {
+      const sorted = Object.values(items).sort((a, b) => {
+        const timeA = a.timestamp?.toDate?.() || new Date(0);
+        const timeB = b.timestamp?.toDate?.() || new Date(0);
+        return timeA - timeB;
+      });
+
+      container.innerHTML = '';
+      sorted.forEach(item => {
+        container.appendChild(renderMessage(item, item.id));
+      });
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // === INIT ===
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return window.location.href = 'login.html';
+
+      const userDoc = await getDoc(doc(db, 'users', user.email));
+      if (!userDoc.exists() || !userDoc.data().username) {
+        Swal.fire({ title: 'Profile Error', text: 'Username is missing.', icon: 'error', confirmButtonColor: '#e50914' });
+        return;
+      }
+
+      currentUserData = {
+        uid: user.uid,
+        email: user.email,
+        username: userDoc.data().username
+      };
+
+      try {
+        // Check if it's self-chat
+        if (peerEmail === user.email) {
+          isSelfChat = true;
+          peerUid = user.uid;
+        } else {
+          const peerDoc = await getDoc(doc(db, 'users', peerEmail));
+          if (!peerDoc.exists()) throw new Error('Peer not found');
+          peerUid = peerDoc.data().uid;
         }
 
-        // Parse URL params
-        function getUrlParam(name) {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(name);
+        const ids = [currentUserData.uid, peerUid].sort();
+        chatId = ids.join('_');
+
+        await setDoc(doc(db, 'chats', chatId), { participants: ids, createdAt: serverTimestamp() }, { merge: true });
+
+        // 🔑 HIDE CALL BUTTONS FOR SELF-CHAT
+        if (isSelfChat) {
+          callButtons.classList.add('hidden');
         }
 
-        onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                window.location.href = 'login.html';
-                return;
-            }
+        loadChatData();
 
-            currentUser = user;
-            peerId = getUrlParam('peer');
-            peerName = getUrlParam('name') || peerId;
-
-            if (!peerId) {
-                showAlert("Invalid chat.", true);
-                setTimeout(() => window.history.back(), 2000);
-                return;
-            }
-
-            document.getElementById('peerName').textContent = peerName;
-
-            // Auto-add if not friend
-            await ensureFriendExists(peerId, peerId);
-
-            // Create chat ID (sorted)
-            const ids = [currentUser.uid, peerId].sort();
-            chatId = ids.join('_');
-
-            // Ensure chat doc exists (optional)
-            await setDoc(doc(db, 'chats', chatId), {
-                participants: ids,
-                createdAt: serverTimestamp()
-            }, { merge: true });
-
-            loadMessages();
+        const replyTo = sessionStorage.getItem('replyTo');
+        if (replyTo) {
+          try {
+            const r = JSON.parse(replyTo);
+            messageInput.placeholder = `Replying to ${r.senderName}...`;
+          } catch (e) {}
+        }
+      } catch (err) {
+        console.error("Init error:", err);
+        Swal.fire({ title: 'Error', text: 'Chat unavailable.', icon: 'error', confirmButtonColor: '#e50914' }).then(() => {
+          window.location.href = 'friends.html';
         });
-
-        // Send on Enter
-        document.getElementById('messageInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
-    </script>
+      }
+    });
+  </script>
 </body>
 </html>

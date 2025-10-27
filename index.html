@@ -2,132 +2,157 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- 🔒 Prevent zooming in Chrome & mobile browsers -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
   <title>Wonderland Portal</title>
-
-  <!-- SweetAlert2 for beautiful alerts -->
+  
+  <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <style>
+    /* 🔒 Disable zoom via CSS */
+    html {
+      touch-action: manipulation;
+    }
+    body {
+      -webkit-text-size-adjust: 100%;
+      -moz-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
     body {
-      background-color: white;
+      background: linear-gradient(135deg, #fff9f9, #ffebee);
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      font-family: 'Segoe UI', sans-serif;
-      color: red;
+      padding: 20px;
+      color: #e50914;
+      overflow: hidden;
     }
 
-    .logo-container {
+    .container {
       text-align: center;
+      max-width: 500px;
+      width: 100%;
     }
 
-    .logo-box {
-      width: 160px;
-      height: 160px;
-      background: white;
-      border: 4px solid red;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin: 0 auto;
-      animation: rotate 6s linear infinite;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    /* Elegant Logo */
+    .logo {
       position: relative;
+      width: 140px;
+      height: 140px;
+      margin: 0 auto 28px;
     }
 
-    /* Custom coded logo */
-    .wonderland-logo {
-      width: 100px;
-      height: 100px;
-      position: relative;
-    }
-
-    /* Academic cap base */
-    .cap {
+    .outer-circle {
       position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 70px;
-      height: 20px;
-      background: red;
-      border-radius: 4px;
-    }
-
-    /* Tassel */
-    .tassel {
-      position: absolute;
-      top: 20px;
-      left: 80%;
-      width: 4px;
-      height: 30px;
-      background: red;
-    }
-
-    .tassel::after {
-      content: '';
-      position: absolute;
-      bottom: -6px;
-      left: -4px;
-      width: 12px;
-      height: 12px;
-      background: red;
+      width: 100%;
+      height: 100%;
+      border: 3px solid #e50914;
       border-radius: 50%;
+      animation: pulse 2s infinite;
     }
 
-    /* Stylized "W" */
-    .letter-w {
+    .inner-logo {
       position: absolute;
-      bottom: 0;
+      top: 50%;
       left: 50%;
-      transform: translateX(-50%);
-      font-size: 48px;
-      font-weight: bold;
-      color: red;
+      transform: translate(-50%, -50%);
+      font-size: 64px;
+      font-weight: 800;
+      background: linear-gradient(to right, #e50914, #ff6b6b);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
       font-family: 'Georgia', serif;
-      line-height: 1;
+      letter-spacing: -2px;
     }
 
-    @keyframes rotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(229, 9, 20, 0.2); }
+      70% { box-shadow: 0 0 0 12px rgba(229, 9, 20, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(229, 9, 20, 0); }
     }
 
     h1 {
-      margin-top: 24px;
-      font-size: 28px;
-      color: red;
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      background: linear-gradient(to right, #e50914, #c20817);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -0.5px;
     }
 
-    .loading {
-      margin-top: 12px;
-      font-style: italic;
+    .subtitle {
+      font-size: 18px;
       color: #555;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    .loader {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(229, 9, 20, 0.2);
+      border-top: 4px solid #e50914;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #777;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Prevent text selection */
+    body {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
   </style>
 </head>
 <body>
-  <div class="logo-container">
-    <div class="logo-box">
-      <div class="wonderland-logo">
-        <div class="cap"></div>
-        <div class="tassel"></div>
-        <div class="letter-w">W</div>
-      </div>
+  <div class="container">
+    <div class="logo">
+      <div class="outer-circle"></div>
+      <div class="inner-logo">W</div>
     </div>
-    <h1>Welcome to Wonderland</h1>
-    <p class="loading">Checking your session...</p>
+    
+    <h1>Wonderland Portal</h1>
+    <p class="subtitle">Your gateway to live classes, friends, and learning</p>
+    
+    <div class="status">
+      <div class="loader"></div>
+      <span>Verifying your session...</span>
+    </div>
   </div>
 
-  <!-- Firebase Auth + Redirect Logic -->
+  <!-- Firebase Auth Redirect -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";

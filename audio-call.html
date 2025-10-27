@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Audio Call – wöndèlånd</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
@@ -14,6 +14,7 @@
     }
     .peer-name { font-size:24px; font-weight:bold; margin-bottom:10px; }
     .timer { font-family:monospace; background:rgba(255,255,255,0.1); padding:8px 16px; border-radius:20px; margin-top:10px; }
+    .status { font-size:14px; color:#ffcc00; margin-top:8px; }
     .controls {
       display:flex;
       gap:30px;
@@ -35,6 +36,7 @@
 <body>
   <div class="call-info">
     <div class="peer-name" id="peerName">Calling...</div>
+    <div class="status" id="callStatus">Ringing...</div>
     <div class="timer" id="callTimer">00:00</div>
   </div>
 
@@ -48,10 +50,17 @@
   </div>
 
   <script type="module">
-    // Same Firebase & Agora setup as video-call.html
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { 
+      getFirestore, 
+      doc, 
+      setDoc, 
+      deleteDoc,
+      serverTimestamp,
+      collection,
+      addDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
@@ -66,23 +75,28 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    // Load Agora SDK
     const script = document.createElement('script');
-    script.src = "https://download.agora.io/sdk/release/AgoraRTC_N.js";
+    script.src = "https://download.agora.io/sdk/release/AgoraRTC_N-4.19.0.js";
     document.head.appendChild(script);
 
     const AGORA_APP_ID = "fcfbeea054a84e529a1d984becbb4774";
-    const CHANNEL_NAME = new URLSearchParams(window.location.search).get('peer');
-    const PEER_NAME = decodeURIComponent(new URLSearchParams(window.location.search).get('name') || 'User');
-    const IS_VIDEO = false;
+    const params = new URLSearchParams(window.location.search);
+    const PEER_EMAIL = params.get('peer');
+    const PEER_NAME = decodeURIComponent(params.get('name') || 'User');
+    const CHANNEL = [auth.currentUser?.email?.toLowerCase(), PEER_EMAIL].filter(Boolean).sort().join('-');
 
     let currentUser = null;
     let client = null;
     let localAudioTrack = null;
     let callStartTime = null;
     let timerInterval = null;
+    let isCallActive = false;
 
-    document.getElementById('peerName').textContent = `Audio call with ${PEER_NAME}`;
+    document.getElementById('peerName').textContent = `Calling ${PEER_NAME}`;
+    document.getElementById('callStatus').textContent = 'Ringing...';
 
+    // === Timer ===
     function formatTime(seconds) {
       const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
       const secs = (seconds % 60).toString().padStart(2, '0');
@@ -101,62 +115,99 @@
       if (timerInterval) clearInterval(timerInterval);
     }
 
-    async function logCall(type, durationSec) {
-      if (!currentUser || !CHANNEL_NAME) return;
-      const chatId = [currentUser.uid, CHANNEL_NAME].sort().join('_');
+    // === Log Call ===
+    async function logCall(status, durationSec = 0) {
+      if (!currentUser || !PEER_EMAIL) return;
+      const chatId = [currentUser.email.toLowerCase(), PEER_EMAIL].sort().join('-');
       await addDoc(collection(db, 'chats', chatId, 'messages'), {
         type: 'call_log',
         callType: 'audio',
-        status: type,
+        status,
         duration: durationSec,
-        sender: currentUser.uid,
+        sender: currentUser.email,
         timestamp: serverTimestamp()
       });
     }
 
-    async function initCall() {
+    // === Create Call Invitation ===
+    async function sendCallInvitation() {
+      if (!PEER_EMAIL) return;
+      const callRef = doc(db, 'calls', PEER_EMAIL);
+      await setDoc(callRef, {
+        caller: currentUser.email,
+        callerName: currentUser.displayName || currentUser.email.split('@')[0],
+        type: 'audio',
+        channel: CHANNEL,
+        timestamp: serverTimestamp(),
+        answered: false
+      });
+    }
+
+    // === Clean Up ===
+    async function cleanup() {
+      isCallActive = false;
+      stopTimer();
+      
+      // Remove call doc
+      if (PEER_EMAIL) {
+        await deleteDoc(doc(db, 'calls', PEER_EMAIL));
+      }
+
+      // Stop Agora
+      if (localAudioTrack) {
+        localAudioTrack.stop();
+        localAudioTrack.close();
+      }
+      if (client) {
+        await client.leave();
+      }
+    }
+
+    // === Start Agora Call ===
+    async function initAgora() {
       if (typeof AgoraRTC === 'undefined') {
-        setTimeout(initCall, 300);
+        setTimeout(initAgora, 200);
         return;
       }
 
       try {
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        await client.join(AGORA_APP_ID, CHANNEL_NAME, null, null);
-
+        await client.join(AGORA_APP_ID, CHANNEL, null, null);
         localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
         await client.publish([localAudioTrack]);
-        startTimer();
 
+        // Listen for peer answer (optional enhancement)
         client.on("user-published", async (user, mediaType) => {
           if (mediaType === "audio") {
             await client.subscribe(user, mediaType);
           }
         });
 
-      } catch (e) {
-        console.error("Audio call error:", e);
-        alert("Failed to start call.");
+        isCallActive = true;
+        document.getElementById('callStatus').textContent = 'Connected';
+        startTimer();
+
+      } catch (err) {
+        console.error("Agora init error:", err);
+        cleanup();
+        alert("Call failed to connect.");
         window.history.back();
       }
     }
 
-    function endCall() {
-      stopTimer();
+    // === End Call ===
+    async function endCall() {
+      if (!isCallActive) {
+        window.history.back();
+        return;
+      }
       const duration = callStartTime ? Math.floor((Date.now() - callStartTime) / 1000) : 0;
-      logCall('answered', duration);
-      cleanup();
+      await logCall('answered', duration);
+      await cleanup();
       window.history.back();
     }
 
-    function cleanup() {
-      if (localAudioTrack) {
-        localAudioTrack.stop();
-        localAudioTrack.close();
-      }
-      if (client) client.leave();
-    }
-
+    // === Buttons ===
     document.getElementById('endCallBtn').onclick = endCall;
     document.getElementById('micBtn').onclick = () => {
       if (!localAudioTrack) return;
@@ -167,19 +218,27 @@
         '<i class="fas fa-microphone-slash"></i>';
     };
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = 'login.html';
+    // === Auth & Start ===
+    onAuthStateChanged(auth, async (user) => {
+      if (!user || !PEER_EMAIL) {
+        window.location.href = 'friends.html';
         return;
       }
       currentUser = user;
-      initCall();
+
+      try {
+        await sendCallInvitation();
+        await initAgora();
+      } catch (err) {
+        console.error("Call setup error:", err);
+        alert("Could not start call.");
+        window.history.back();
+      }
     });
 
-    window.addEventListener('beforeunload', () => {
-      const duration = callStartTime ? Math.floor((Date.now() - callStartTime) / 1000) : 0;
-      logCall('answered', duration);
-      cleanup();
+    // Cleanup on leave
+    window.addEventListener('beforeunload', async () => {
+      await endCall();
     });
   </script>
 </body>

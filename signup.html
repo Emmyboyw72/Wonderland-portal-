@@ -2,16 +2,37 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- 🔒 Prevent zooming -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
   <title>Sign Up - Wonderland</title>
+  
+  <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   <style>
+    /* 🔒 Disable zoom via CSS */
+    html {
+      touch-action: manipulation;
+    }
+    body {
+      -webkit-text-size-adjust: 100%;
+      -moz-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
+
     body {
       background: white;
       display: flex;
@@ -20,85 +41,109 @@
       min-height: 100vh;
       padding: 20px;
     }
+
     .signup-container {
       width: 100%;
       max-width: 420px;
       background: #fff;
       padding: 32px;
-      border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(229, 9, 20, 0.12);
       border: 2px solid #e50914;
     }
+
     h2 {
       text-align: center;
       color: #e50914;
       margin-bottom: 24px;
-      font-size: 26px;
+      font-size: 28px;
+      font-weight: 800;
     }
+
     .input-group {
-      margin-bottom: 18px;
+      margin-bottom: 20px;
     }
+
     label {
       display: block;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       color: #333;
       font-weight: 600;
+      font-size: 15px;
     }
+
     input {
       width: 100%;
-      padding: 12px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+      padding: 14px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
       font-size: 16px;
-      transition: border-color 0.3s;
+      transition: all 0.3s;
     }
+
     input:focus {
       outline: none;
       border-color: #e50914;
+      box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.15);
     }
+
     .checkbox-group {
       display: flex;
       align-items: flex-start;
-      margin: 16px 0 24px;
+      margin: 18px 0 26px;
     }
+
     .checkbox-group input {
       width: auto;
-      margin-right: 10px;
+      margin-right: 12px;
       margin-top: 4px;
+      accent-color: #e50914;
     }
+
     .checkbox-group label {
       font-weight: normal;
       color: #555;
       font-size: 14px;
+      line-height: 1.5;
     }
+
     .checkbox-group a {
       color: #e50914;
       text-decoration: none;
+      font-weight: 600;
     }
+
     .btn {
       width: 100%;
-      padding: 14px;
+      padding: 16px;
       background: #e50914;
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 10px;
       font-size: 18px;
       font-weight: bold;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: background 0.3s, transform 0.2s;
     }
+
     .btn:hover {
       background: #c20817;
+      transform: translateY(-2px);
     }
+
     .btn:disabled {
       opacity: 0.7;
       cursor: not-allowed;
+      transform: none;
     }
+
     .login-link {
       text-align: center;
-      margin-top: 20px;
+      margin-top: 24px;
       color: #555;
+      font-size: 15px;
     }
+
     .login-link a {
       color: #e50914;
       text-decoration: none;
@@ -159,17 +204,21 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    // 🔒 DEVICE LOCK: Check if already signed up on this device
+    // 🔒 DEVICE LOCK: Prevent multiple accounts per device
     if (localStorage.getItem('wonderland_device_registered')) {
       Swal.fire({
-        title: 'Account Already Created',
-        html: 'Only one account is allowed per device.<br>You can log in or use another device.',
+        title: '<strong>Account Already Exists</strong>',
+        html: 'Only <b>one account</b> is allowed per device.<br>Please log in or use a different device.',
         icon: 'info',
-        confirmButtonText: 'Go to Login'
+        confirmButtonText: 'Go to Login',
+        confirmButtonColor: '#e50914',
+        customClass: {
+          popup: 'swal2-border',
+          title: 'swal2-title-red'
+        }
       }).then(() => {
         window.location.href = 'login.html';
       });
-      // Hide form to prevent interaction
       document.getElementById('signupForm').style.display = 'none';
     }
 
@@ -185,44 +234,37 @@
 
       // Validation
       if (!username || username.length < 3) {
-        Swal.fire('Oops!', 'Username must be at least 3 characters.', 'warning');
+        showBeautifulAlert('Oops!', 'Username must be at least 3 characters.', 'warning');
         return;
       }
       if (!email.endsWith('@gmail.com')) {
-        Swal.fire('Oops!', 'Please use a valid Gmail address.', 'warning');
+        showBeautifulAlert('Oops!', 'Please use a valid <b>@gmail.com</b> address.', 'warning');
         return;
       }
       if (!phone || phone.length < 10) {
-        Swal.fire('Oops!', 'Please enter a valid phone number.', 'warning');
+        showBeautifulAlert('Oops!', 'Please enter a valid phone number.', 'warning');
         return;
       }
       if (password.length < 6) {
-        Swal.fire('Oops!', 'Password must be at least 6 characters.', 'warning');
+        showBeautifulAlert('Oops!', 'Password must be at least 6 characters.', 'warning');
         return;
       }
       if (!terms) {
-        Swal.fire('Required', 'You must agree to the Community Guidelines.', 'info');
+        showBeautifulAlert('Required', 'You must agree to the Community Guidelines.', 'info');
         return;
       }
 
-      Swal.fire({
-        title: 'Creating Account...',
-        html: 'Setting up your profile.',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        didOpen: () => Swal.showLoading()
-      });
+      showBeautifulAlert('Creating Account...', 'Setting up your profile...', 'loading');
 
       try {
-        // Step 1: Create user in Firebase Auth
+        // Create user
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Step 2: Save profile to Firestore under EMAIL (not UID)
-        const { getFirestore, doc, setDoc, collection } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        // Save to Firestore under EMAIL
+        const { getFirestore, doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
         const db = getFirestore(app);
 
-        // Save user data
         await setDoc(doc(db, "users", email), {
           uid: user.uid,
           username: username,
@@ -232,22 +274,23 @@
           createdAt: new Date().toISOString()
         });
 
-        // Create empty friends list
+        // Initialize friends list
         await setDoc(doc(db, "friends", email, "meta", "info"), {
-          initialized: true
+          initialized: true,
+          createdAt: new Date().toISOString()
         });
 
-        // 🔒 Mark this device as registered
+        // 🔒 Lock this device
         localStorage.setItem('wonderland_device_registered', 'true');
         localStorage.setItem('wonderland_user_email', email);
 
         Swal.close();
-        Swal.fire({
-          title: 'Success!',
-          html: `Welcome, <strong>${username}</strong>!<br>Your account is ready.`,
-          icon: 'success',
-          confirmButtonText: 'Go to Dashboard'
-        }).then(() => {
+        showBeautifulAlert(
+          'Success!',
+          `Welcome, <strong>${username}</strong>!<br>Your account is ready.`,
+          'success',
+          'Go to Dashboard'
+        ).then(() => {
           window.location.href = 'dashboard.html';
         });
 
@@ -261,15 +304,15 @@
         } else if (error.code === 'auth/weak-password') {
           message = 'Password is too weak. Use at least 6 characters.';
         }
-        Swal.fire('Sign Up Failed', message, 'error');
+        showBeautifulAlert('Sign Up Failed', message, 'error');
       }
     });
 
     function showGuidelines() {
       Swal.fire({
-        title: 'Wonderland Community Guidelines',
+        title: '<strong>Wonderland Community Guidelines</strong>',
         html: `
-          <ul style="text-align: left; line-height: 1.6;">
+          <ul style="text-align: left; line-height: 1.7; color:#444;">
             <li>Be respectful to all users.</li>
             <li>No hate speech, bullying, or harassment.</li>
             <li>Do not share personal or sensitive information.</li>
@@ -278,9 +321,57 @@
           </ul>
         `,
         icon: 'info',
-        confirmButtonText: 'I Understand'
+        confirmButtonText: 'I Understand',
+        confirmButtonColor: '#e50914',
+        customClass: {
+          popup: 'swal2-border'
+        }
       });
     }
+
+    function showBeautifulAlert(title, html, icon, confirmText = 'OK') {
+      const config = {
+        title: title,
+        html: html,
+        icon: icon,
+        confirmButtonText: confirmText,
+        confirmButtonColor: '#e50914',
+        customClass: {
+          popup: 'swal2-border',
+          title: icon === 'success' ? 'swal2-title-success' : ''
+        }
+      };
+
+      if (icon === 'loading') {
+        config.allowOutsideClick = false;
+        config.allowEscapeKey = false;
+        config.didOpen = () => Swal.showLoading();
+        delete config.icon;
+      }
+
+      return Swal.fire(config);
+    }
+
+    // Custom styles for alerts
+    const style = document.createElement('style');
+    style.textContent = `
+      .swal2-border {
+        border: 2px solid #e50914 !important;
+        border-radius: 16px !important;
+      }
+      .swal2-title-red {
+        color: #e50914 !important;
+      }
+      .swal2-popup .swal2-styled.swal2-confirm {
+        background: #e50914 !important;
+        border-radius: 10px !important;
+        font-weight: bold !important;
+      }
+      .swal2-popup .swal2-styled.swal2-confirm:hover {
+        background: #c20817 !important;
+      }
+    `;
+    document.head.appendChild(style);
   </script>
 </body>
 </html>

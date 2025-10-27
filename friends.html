@@ -1,567 +1,419 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Friends – wöndèlånd</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            user-select: none;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>wöndèlånd chat</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    /* 🔒 Prevent ALL text selection */
+    html, body, * {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+    }
 
-        body {
-            background: #f0f2f5;
-            color: #333;
-            padding-bottom: 80px;
-        }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+      padding: 0;
+    }
 
-        header {
-            background: white;
-            padding: 14px 16px;
-            display: flex;
-            align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+    header {
+      background: white;
+      padding: 12px 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      z-index: 100;
+    }
 
-        .header-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #e50914;
-            flex: 1;
-            text-align: center;
-        }
+    .back-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e50914;
+      font-size: 20px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
 
-        .friends-list {
-            padding: 12px 0;
-        }
+    .header-title {
+      font-weight: bold;
+      font-size: 18px;
+      color: #333;
+      flex: 1;
+      text-align: center;
+    }
 
-        .friend-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            background: white;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-        }
+    .add-friend-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #e50914;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
 
-        .avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: #ffeaa7;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: #e50914;
-            margin-right: 12px;
-            flex-shrink: 0;
-        }
+    .friends-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
 
-        .friend-info {
-            flex: 1;
-            min-width: 0;
-        }
+    .friend-item {
+      display: flex;
+      align-items: flex-start;
+      padding: 12px 16px;
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
 
-        .friend-name {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 4px;
-        }
+    .friend-item:hover {
+      background: #f8f9fa;
+    }
 
-        .last-message {
-            font-size: 14px;
-            color: #888;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+    .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #e50914;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      margin-right: 12px;
+      flex-shrink: 0;
+      font-size: 18px;
+    }
 
-        .friend-meta {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            margin-left: 10px;
-        }
+    .friend-info {
+      flex: 1;
+      min-width: 0;
+    }
 
-        .timestamp {
-            font-size: 11px;
-            color: #999;
-            margin-bottom: 4px;
-        }
+    .friend-name {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
-        .seen-indicator {
-            color: #e50914;
-            font-size: 12px;
-            font-weight: bold;
-        }
+    .last-message-row {
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      color: #777;
+    }
 
-        #addFriendBtn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: #e50914;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
-            font-size: 24px;
-            cursor: pointer;
-            z-index: 90;
-        }
+    .last-message {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
-        .popup {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.6);
-            z-index: 200;
-            justify-content: center;
-            align-items: center;
-        }
+    .seen-indicator {
+      color: #999;
+      font-weight: bold;
+      margin-left: 6px;
+      min-width: 16px;
+      text-align: right;
+    }
 
-        .popup-content {
-            background: white;
-            padding: 24px;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-        }
+    .seen-indicator.red {
+      color: #e50914;
+    }
 
-        .popup-title {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #e50914;
-            font-size: 20px;
-            font-weight: bold;
-        }
+    .timestamp {
+      font-size: 12px;
+      color: #999;
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
 
-        input, select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            font-size: 16px;
-        }
-
-        .popup-buttons {
-            display: flex;
-            gap: 12px;
-        }
-
-        button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 12px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .btn-cancel {
-            background: #f1f1f1;
-            color: #333;
-        }
-
-        .btn-add {
-            background: #e50914;
-            color: white;
-        }
-
-        .user-list {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-top: 12px;
-        }
-
-        .user-item {
-            padding: 12px;
-            background: #f9f9f9;
-            border-radius: 10px;
-            margin-bottom: 8px;
-            cursor: pointer;
-        }
-
-        .user-item:hover {
-            background: #f0f0f0;
-        }
-
-        .empty {
-            text-align: center;
-            color: #888;
-            padding: 30px;
-        }
-
-        .alert {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.9);
-            padding: 20px 24px;
-            border-radius: 16px;
-            color: white;
-            font-weight: bold;
-            z-index: 1000;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            opacity: 0;
-            transition: opacity 0.3s;
-            text-align: center;
-            max-width: 90%;
-            font-size: 16px;
-        }
-
-        .alert.show {
-            opacity: 1;
-        }
-
-        .alert-success {
-            background: linear-gradient(135deg, #00c853, #007e33);
-        }
-
-        .alert-error {
-            background: linear-gradient(135deg, #d32f2f, #b71c1c);
-        }
-    </style>
+    /* No loading state — empty list shows message */
+    #friendsList:empty::before {
+      content: "No chats yet";
+      display: block;
+      text-align: center;
+      padding: 30px;
+      color: #999;
+    }
+  </style>
 </head>
 <body>
 
-    <header>
-        <div class="header-title">Friends</div>
-    </header>
-
-    <div class="friends-list" id="friendsList">
-        <!-- Friends loaded here -->
+  <header>
+    <div class="back-btn" id="backBtn">
+      <i class="fas fa-arrow-left"></i>
     </div>
-
-    <div id="addFriendBtn">
-        <i class="fas fa-plus"></i>
+    <div class="header-title">wöndèlånd chat</div>
+    <div class="add-friend-btn" id="addFriendBtn">
+      <i class="fas fa-plus"></i>
     </div>
+  </header>
 
-    <!-- Add by Gmail Popup -->
-    <div id="gmailPopup" class="popup">
-        <div class="popup-content">
-            <div class="popup-title">Save Contact by Gmail</div>
-            <input type="email" id="gmailInput" placeholder="Enter Gmail" />
-            <input type="text" id="usernameInput" placeholder="Preferred Username (optional)" />
-            <div class="popup-buttons">
-                <button class="btn-cancel" onclick="closePopup('gmailPopup')">Cancel</button>
-                <button class="btn-add" onclick="saveContactByGmail()">Save</button>
-            </div>
+  <div class="friends-list" id="friendsList">
+    <!-- Chats will appear here -->
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      getDoc, 
+      getDocs,
+      setDoc, 
+      addDoc,
+      serverTimestamp,
+      onSnapshot,
+      query,
+      orderBy,
+      where
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const ADMIN_EMAIL = "bluepay863@gmail.com";
+
+    // Get first letter for avatar
+    function getInitials(name) {
+      return (name?.charAt(0) || '?').toUpperCase();
+    }
+
+    // Ensure self and admin chats exist
+    async function ensureMandatoryChats(user) {
+      const uid = user.uid;
+      const email = user.email;
+
+      // Self-chat
+      const selfChatId = `${uid}_${uid}`;
+      await setDoc(doc(db, 'chats', selfChatId), {
+        participants: [uid, uid],
+        self: true,
+        type: 'self',
+        createdAt: serverTimestamp()
+      }, { merge: true });
+
+      // Admin chat
+      if (email !== ADMIN_EMAIL) {
+        const adminDoc = await getDoc(doc(db, 'users', ADMIN_EMAIL));
+        if (adminDoc.exists()) {
+          const adminUid = adminDoc.data().uid;
+          const ids = [uid, adminUid].sort();
+          const adminChatId = ids.join('_');
+          await setDoc(doc(db, 'chats', adminChatId), {
+            participants: ids,
+            type: 'admin',
+            createdAt: serverTimestamp()
+          }, { merge: true });
+        }
+      }
+    }
+
+    // Add new friend by email
+    async function addFriendByEmail(currentUser, friendEmail) {
+      if (!friendEmail || friendEmail === currentUser.email) {
+        Swal.fire('Invalid', 'Cannot add yourself.', 'warning');
+        return;
+      }
+
+      const friendDoc = await getDoc(doc(db, 'users', friendEmail));
+      if (!friendDoc.exists()) {
+        Swal.fire('Not Found', 'User not found.', 'error');
+        return;
+      }
+
+      const friendUid = friendDoc.data().uid;
+      const ids = [currentUser.uid, friendUid].sort();
+      const chatId = ids.join('_');
+
+      // Create chat room
+      await setDoc(doc(db, 'chats', chatId), {
+        participants: ids,
+        createdAt: serverTimestamp()
+      }, { merge: true });
+
+      Swal.fire('Success', 'Friend added!', 'success');
+    }
+
+    // Render friend item
+    function renderFriendItem(chat) {
+      const item = document.createElement('div');
+      item.className = 'friend-item';
+      
+      const timeStr = chat.lastTimestamp 
+        ? chat.lastTimestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '';
+      
+      const seenClass = chat.isSentByMe && chat.seen ? 'red' : '';
+      const seenIcon = chat.isSentByMe ? `<span class="seen-indicator ${seenClass}">✓✓</span>` : '';
+
+      item.innerHTML = `
+        <div class="avatar">${getInitials(chat.name)}</div>
+        <div class="friend-info">
+          <div class="friend-name">${chat.name}</div>
+          <div class="last-message-row">
+            <div class="last-message">${chat.lastMessage || 'Tap to chat'}</div>
+            ${seenIcon}
+          </div>
         </div>
-    </div>
+        ${timeStr ? `<div class="timestamp">${timeStr}</div>` : ''}
+      `;
+      
+      item.addEventListener('click', () => {
+        window.location.href = `messenger.html?peer=${encodeURIComponent(chat.email)}&name=${encodeURIComponent(chat.name)}`;
+      });
+      
+      return item;
+    }
 
-    <!-- Find Contact Popup -->
-    <div id="findPopup" class="popup">
-        <div class="popup-content">
-            <div class="popup-title">Find Contact</div>
-            <div class="user-list" id="userList">
-                <!-- Non-friend users loaded here -->
-            </div>
-            <div class="popup-buttons">
-                <button class="btn-cancel" onclick="closePopup('findPopup')">Close</button>
-            </div>
-        </div>
-    </div>
+    // Load all chats
+    async function loadFriendsList(user) {
+      const container = document.getElementById('friendsList');
+      const uid = user.uid;
 
-    <div id="alert" class="alert">
-        <span id="alert-message">Action completed!</span>
-    </div>
+      const chatsQuery = query(collection(db, 'chats'), orderBy('createdAt', 'desc'));
+      onSnapshot(chatsQuery, async (snapshot) => {
+        const chatList = [];
+        for (const docSnap of snapshot.docs) {
+          const chatData = docSnap.data();
+          if (!chatData.participants || !chatData.participants.includes(uid)) continue;
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { 
-            getFirestore, 
-            collection, 
-            doc, 
-            getDoc, 
-            setDoc, 
-            query, 
-            where, 
-            getDocs, 
-            onSnapshot,
-            serverTimestamp,
-            orderBy
-        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+          let name = 'Unknown', email = '', isSelf = false, isAdmin = false;
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
-            authDomain: "emmy-programmers.firebaseapp.com",
-            projectId: "emmy-programmers",
-            storageBucket: "emmy-programmers.firebasestorage.app",
-            messagingSenderId: "351752440867",
-            appId: "1:351752440867:web:1f65d8c922d3d48e063596"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        let currentUser = null;
-        let friends = new Map(); // userId => friend data
-
-        function showAlert(message, isError = false) {
-            const alertEl = document.getElementById('alert');
-            alertEl.textContent = message;
-            alertEl.className = `alert ${isError ? 'alert-error' : 'alert-success'} show`;
-            setTimeout(() => alertEl.classList.remove('show'), 4000);
-        }
-
-        function closePopup(id) {
-            document.getElementById(id).style.display = 'none';
-        }
-
-        function getInitials(name) {
-            return name ? name.charAt(0).toUpperCase() : 'U';
-        }
-
-        function formatTime(timestamp) {
-            if (!timestamp?.toDate) return '';
-            const date = timestamp.toDate();
-            const now = new Date();
-            if (date.toDateString() === now.toDateString()) {
-                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          if (chatData.self) {
+            name = 'Saved Messages';
+            email = user.email;
+            isSelf = true;
+          } else if (chatData.type === 'admin') {
+            name = 'Admin';
+            email = ADMIN_EMAIL;
+            isAdmin = true;
+          } else {
+            const otherUid = chatData.participants.find(id => id !== uid);
+            if (otherUid) {
+              const usersSnap = await getDocs(collection(db, 'users'));
+              let found = null;
+              usersSnap.forEach(u => {
+                if (u.data().uid === otherUid) found = u.data();
+              });
+              if (found) {
+                name = found.username || found.email.split('@')[0];
+                email = found.email;
+              } else {
+                name = 'User';
+                email = 'unknown';
+              }
             }
-            return date.toLocaleDateString();
+          }
+
+          // Get last message
+          let lastMessage = '', lastTimestamp = null, isSentByMe = false, seen = false;
+          try {
+            const msgRef = collection(db, 'chats', docSnap.id, 'messages');
+            const msgQ = query(msgRef, orderBy('timestamp', 'desc'));
+            const msgSnap = await getDocs(msgQ);
+            if (!msgSnap.empty) {
+              const last = msgSnap.docs[0].data();
+              lastMessage = last.text || '';
+              lastTimestamp = last.timestamp;
+              isSentByMe = last.senderUid === uid;
+              seen = last.seen || false;
+            }
+          } catch (e) {
+            console.warn("Last message load failed", e);
+          }
+
+          chatList.push({ id: docSnap.id, name, email, lastMessage, lastTimestamp, isSelf, isAdmin, isSentByMe, seen });
         }
 
-        // Open messenger with peer
-        function openChat(peerId, peerName) {
-            // Ensure friend exists
-            if (!friends.has(peerId)) {
-                // Auto-add if not present (e.g., from non-friend message)
-                addFriendLocally(peerId, { username: peerName, email: peerId });
-            }
-            window.location.href = `messenger.html?peer=${peerId}&name=${encodeURIComponent(peerName)}`;
-        }
-
-        // Add friend to local list & Firestore
-        async function addFriend(peerId, peerData) {
-            if (peerId === currentUser.uid) return;
-            if (friends.has(peerId)) {
-                showAlert("Already in friends list.");
-                return;
-            }
-
-            try {
-                // Add to user's friends subcollection
-                await setDoc(doc(db, 'friends', currentUser.uid, 'list', peerId), {
-                    userId: peerId,
-                    username: peerData.username || peerData.email.split('@')[0],
-                    email: peerData.email,
-                    addedAt: serverTimestamp()
-                });
-
-                // Also add reverse (optional, for mutual)
-                await setDoc(doc(db, 'friends', peerId, 'list', currentUser.uid), {
-                    userId: currentUser.uid,
-                    username: currentUser.username || currentUser.email.split('@')[0],
-                    email: currentUser.email,
-                    addedAt: serverTimestamp()
-                });
-
-                addFriendLocally(peerId, peerData);
-                showAlert("Contact saved!");
-            } catch (err) {
-                console.error("Add friend error:", err);
-                showAlert("Failed to save contact.", true);
-            }
-        }
-
-        function addFriendLocally(peerId, peerData) {
-            friends.set(peerId, {
-                ...peerData,
-                userId: peerId
-            });
-            renderFriendsList();
-        }
-
-        async function saveContactByGmail() {
-            const gmail = document.getElementById('gmailInput').value.trim().toLowerCase();
-            const username = document.getElementById('usernameInput').value.trim();
-
-            if (!gmail || !gmail.includes('@')) {
-                showAlert("Please enter a valid Gmail.", true);
-                return;
-            }
-
-            if (gmail === currentUser.email) {
-                showAlert("Cannot add yourself.", true);
-                return;
-            }
-
-            try {
-                const userDoc = await getDoc(doc(db, 'users', gmail));
-                if (!userDoc.exists()) {
-                    showAlert("User not found.", true);
-                    return;
-                }
-
-                const userData = userDoc.data();
-                const finalUsername = username || userData.username || gmail.split('@')[0];
-                await addFriend(gmail, { ...userData, username: finalUsername, email: gmail });
-                closePopup('gmailPopup');
-                document.getElementById('gmailInput').value = '';
-                document.getElementById('usernameInput').value = '';
-            } catch (err) {
-                console.error("Gmail lookup error:", err);
-                showAlert("Failed to find user.", true);
-            }
-        }
-
-        async function loadNonFriends() {
-            try {
-                // Get all users except self and current friends
-                const usersSnap = await getDocs(collection(db, 'users'));
-                const allUserIds = new Set();
-                usersSnap.forEach(doc => {
-                    if (doc.id !== currentUser.uid) allUserIds.add(doc.id);
-                });
-
-                // Remove friends
-                friends.forEach((_, id) => allUserIds.delete(id));
-
-                const nonFriendIds = Array.from(allUserIds);
-                const userListEl = document.getElementById('userList');
-                if (nonFriendIds.length === 0) {
-                    userListEl.innerHTML = '<div class="empty">No new contacts found.</div>';
-                    return;
-                }
-
-                let html = '';
-                for (const id of nonFriendIds) {
-                    const userDoc = await getDoc(doc(db, 'users', id));
-                    if (userDoc.exists()) {
-                        const data = userDoc.data();
-                        const name = data.username || id.split('@')[0];
-                        html += `
-                            <div class="user-item" onclick="addFriend('${id}', { username: '${name.replace(/'/g, "\\'")}', email: '${id}' })">
-                                ${name} (${id})
-                            </div>
-                        `;
-                    }
-                }
-                userListEl.innerHTML = html;
-            } catch (err) {
-                console.error("Load non-friends error:", err);
-                document.getElementById('userList').innerHTML = '<div class="empty">Failed to load.</div>';
-            }
-        }
-
-        // Render friends with last message & seen status
-        async function renderFriendsList() {
-            const listEl = document.getElementById('friendsList');
-            if (friends.size === 0) {
-                listEl.innerHTML = '<div class="empty">No friends yet. Tap + to add.</div>';
-                return;
-            }
-
-            let html = '';
-            for (const [peerId, friend] of friends) {
-                // Get last message from chat
-                const chatId = [currentUser.uid, peerId].sort().join('_');
-                const messagesRef = collection(db, 'chats', chatId, 'messages');
-                const q = query(messagesRef, orderBy('timestamp', 'desc'), where('deletedFor', 'not-in', [[currentUser.uid]]));
-                const msgSnap = await getDocs(q);
-                let lastMsg = '', timestamp = null, seen = false;
-
-                if (!msgSnap.empty) {
-                    const last = msgSnap.docs[0].data();
-                    lastMsg = last.text || '[Media]';
-                    timestamp = last.timestamp;
-                    seen = last.seenBy?.includes(currentUser.uid) || false;
-                }
-
-                html += `
-                    <div class="friend-item" onclick="openChat('${peerId}', '${(friend.username || peerId).replace(/'/g, "\\'")}')">
-                        <div class="avatar">${getInitials(friend.username || peerId)}</div>
-                        <div class="friend-info">
-                            <div class="friend-name">${friend.username || peerId}</div>
-                            <div class="last-message">${lastMsg || 'No messages'}</div>
-                        </div>
-                        <div class="friend-meta">
-                            <div class="timestamp">${formatTime(timestamp)}</div>
-                            ${seen ? '<div class="seen-indicator">✓✓</div>' : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            listEl.innerHTML = html;
-        }
-
-        // Load friends from Firestore
-        function loadFriends() {
-            const friendsRef = collection(db, 'friends', currentUser.uid, 'list');
-            onSnapshot(friendsRef, (snapshot) => {
-                friends.clear();
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    friends.set(data.userId, data);
-                });
-                renderFriendsList();
-            });
-        }
-
-        // Listen for incoming messages from non-friends
-        function listenForNewChats() {
-            // This ensures if someone messages you, they appear in friends
-            const chatsRef = collection(db, 'chats');
-            // We can't easily query across subcollections, so we rely on:
-            // - When a message is sent to you, the sender adds you as friend (handled in messenger.html)
-            // OR
-            // - We periodically check (not ideal). Better: handle in messenger send logic.
-        }
-
-        // Popup handlers
-        document.getElementById('addFriendBtn').addEventListener('click', () => {
-            const popup = document.createElement('div');
-            popup.className = 'popup';
-            popup.innerHTML = `
-                <div class="popup-content" style="text-align:center;">
-                    <div class="popup-title">Add Contact</div>
-                    <button class="btn-add" style="margin-bottom:12px;" onclick="document.getElementById('gmailPopup').style.display='flex';document.querySelector('.popup').remove();">Save by Gmail</button>
-                    <button class="btn-add" onclick="loadNonFriends();document.getElementById('findPopup').style.display='flex';document.querySelector('.popup').remove();">Find Contact</button>
-                    <button class="btn-cancel" style="margin-top:12px;" onclick="document.querySelector('.popup').remove();">Cancel</button>
-                </div>
-            `;
-            document.body.appendChild(popup);
+        // Sort: self, admin, then by time
+        chatList.sort((a, b) => {
+          if (a.isSelf) return -1;
+          if (b.isSelf) return 1;
+          if (a.isAdmin) return -1;
+          if (b.isAdmin) return 1;
+          return (b.lastTimestamp?.toDate?.() || new Date(0)) - (a.lastTimestamp?.toDate?.() || new Date(0));
         });
 
-        // Expose functions to global scope for onclick
-        window.closePopup = closePopup;
-        window.saveContactByGmail = saveContactByGmail;
-        window.addFriend = addFriend;
-        window.openChat = openChat;
-
-        // Auth state
-        onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                window.location.href = 'login.html';
-                return;
-            }
-            currentUser = user;
-            loadFriends();
-            listenForNewChats();
+        // Render
+        container.innerHTML = '';
+        chatList.forEach(chat => {
+          container.appendChild(renderFriendItem(chat));
         });
-    </script>
+      });
+    }
+
+    // === INIT ===
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return window.location.href = 'login.html';
+
+      const userDoc = await getDoc(doc(db, 'users', user.email));
+      if (!userDoc.exists()) {
+        Swal.fire('Error', 'Profile missing.', 'error');
+        return;
+      }
+
+      await ensureMandatoryChats(user);
+      loadFriendsList(user);
+
+      // Back to dashboard
+      document.getElementById('backBtn').addEventListener('click', () => {
+        window.location.href = 'dashboard.html';
+      });
+
+      // Add friend
+      document.getElementById('addFriendBtn').addEventListener('click', async () => {
+        const { value: email } = await Swal.fire({
+          title: 'Add Friend',
+          input: 'email',
+          inputLabel: 'Enter friend\'s Gmail',
+          inputPlaceholder: 'friend@gmail.com',
+          confirmButtonColor: '#e50914',
+          showCancelButton: true
+        });
+        if (email) {
+          await addFriendByEmail(user, email);
+        }
+      });
+    });
+  </script>
 </body>
 </html>

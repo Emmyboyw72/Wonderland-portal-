@@ -2,15 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- 🔒 Prevent zooming in Chrome and mobile browsers -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
   <title>Login - Wonderland</title>
+  
+  <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   <style>
+    /* 🔒 Disable zoom & text selection */
+    html {
+      touch-action: manipulation;
+    }
+    body {
+      -webkit-text-size-adjust: 100%;
+      -moz-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
     body {
@@ -27,48 +47,51 @@
       max-width: 400px;
       background: #fff;
       padding: 32px;
-      border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-      border: 2px solid red;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(229, 9, 20, 0.12);
+      border: 2px solid #e50914;
     }
 
     h2 {
       text-align: center;
-      color: red;
+      color: #e50914;
       margin-bottom: 24px;
-      font-size: 26px;
+      font-size: 28px;
+      font-weight: 800;
     }
 
     .input-group {
-      margin-bottom: 18px;
+      margin-bottom: 20px;
     }
 
     label {
       display: block;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       color: #333;
       font-weight: 600;
+      font-size: 15px;
     }
 
     input {
       width: 100%;
-      padding: 12px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+      padding: 14px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
       font-size: 16px;
-      transition: border-color 0.3s;
+      transition: all 0.3s;
     }
 
     input:focus {
       outline: none;
-      border-color: red;
+      border-color: #e50914;
+      box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.15);
     }
 
     .options {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
       font-size: 14px;
     }
 
@@ -78,45 +101,49 @@
     }
 
     .remember input {
-      margin-right: 6px;
+      margin-right: 8px;
+      accent-color: #e50914;
     }
 
     .forgot {
-      color: red;
+      color: #e50914;
       text-decoration: none;
       font-weight: bold;
     }
 
     .btn {
       width: 100%;
-      padding: 14px;
-      background: red;
+      padding: 16px;
+      background: #e50914;
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 10px;
       font-size: 18px;
       font-weight: bold;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: background 0.3s, transform 0.2s;
     }
 
     .btn:hover {
-      background: #cc0000;
+      background: #c20817;
+      transform: translateY(-2px);
     }
 
     .btn:disabled {
       opacity: 0.7;
       cursor: not-allowed;
+      transform: none;
     }
 
     .signup-link {
       text-align: center;
-      margin-top: 20px;
+      margin-top: 24px;
       color: #555;
+      font-size: 15px;
     }
 
     .signup-link a {
-      color: red;
+      color: #e50914;
       text-decoration: none;
       font-weight: bold;
     }
@@ -144,7 +171,7 @@
         <a href="#" class="forgot" id="forgotLink">Forgot password?</a>
       </div>
 
-      <button type="submit" class="btn" id="loginBtn">Log In</button>
+      <button type="submit" class="btn">Log In</button>
     </form>
 
     <div class="signup-link">
@@ -155,6 +182,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
@@ -167,121 +195,164 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const email = document.getElementById('email').value.trim();
+      const email = document.getElementById('email').value.trim().toLowerCase();
       const password = document.getElementById('password').value;
 
-      if (!email || !email.includes('@gmail.com')) {
-        Swal.fire('Invalid Email', 'Please enter a valid Gmail address.', 'warning');
+      if (!email || !email.endsWith('@gmail.com')) {
+        showBeautifulAlert('Invalid Email', 'Please enter a valid <b>@gmail.com</b> address.', 'warning');
         return;
       }
 
       if (password.length < 6) {
-        Swal.fire('Invalid Password', 'Password must be at least 6 characters.', 'warning');
+        showBeautifulAlert('Invalid Password', 'Password must be at least 6 characters.', 'warning');
         return;
       }
 
-      Swal.fire({
-        title: 'Logging in...',
-        html: 'Verifying your account status...',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        didOpen: () => Swal.showLoading()
-      });
+      showBeautifulAlert('Logging in...', 'Verifying your credentials...', 'loading');
 
       try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // 🔒 Check if email is verified
+        // ✅ Check if user exists in Firestore (extra safety)
+        const userDoc = await getDoc(doc(db, "users", email));
+        if (!userDoc.exists()) {
+          Swal.close();
+          showBeautifulAlert(
+            'Account Not Found',
+            'This Gmail was not found in Wonderland Portal.<br>Please sign up first.',
+            'error'
+          );
+          return;
+        }
+
+        // 🔒 Check email verification
         if (!user.emailVerified) {
           Swal.close();
           Swal.fire({
-            title: 'Email Not Verified',
-            html: `Please verify your email address.<br>We can <strong>resend the verification link</strong> to <strong>${email}</strong>.`,
+            title: '<strong>Email Not Verified</strong>',
+            html: `We sent a verification link to:<br><strong>${email}</strong>`,
             icon: 'warning',
-            showCancelButton: true,
             confirmButtonText: 'Resend Verification Email',
-            cancelButtonText: 'Cancel'
+            cancelButtonText: 'Cancel',
+            showCancelButton: true,
+            confirmButtonColor: '#e50914',
+            customClass: { popup: 'swal2-border' }
           }).then(async (result) => {
             if (result.isConfirmed) {
               try {
                 await sendEmailVerification(user);
-                Swal.fire('Sent!', 'Verification email resent. Please check your inbox.', 'success');
+                showBeautifulAlert(
+                  'Verification Sent!',
+                  'Please check your Gmail inbox (and spam folder).',
+                  'success'
+                );
               } catch (err) {
-                Swal.fire('Error', 'Failed to resend verification email. Please try again.', 'error');
+                showBeautifulAlert('Error', 'Failed to resend verification email.', 'error');
               }
             }
           });
           return;
         }
 
-        // ✅ Verified: proceed to dashboard
+        // ✅ Success
         Swal.close();
-        Swal.fire({
-          title: 'Success!',
-          text: 'You are now logged in.',
-          icon: 'success',
-          timer: 1500,
-          showConfirmButton: false
-        }).then(() => {
+        showBeautifulAlert('Success!', 'You are now logged in.', 'success');
+        setTimeout(() => {
           window.location.href = 'dashboard.html';
-        });
+        }, 1500);
 
       } catch (error) {
         Swal.close();
-        let message = 'Login failed. Please check your credentials.';
         if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-          message = 'Incorrect email or password.';
+          showBeautifulAlert('Login Failed', 'Credentials not correct.', 'error');
         } else if (error.code === 'auth/too-many-requests') {
-          message = 'Too many failed attempts. Try again later.';
+          showBeautifulAlert('Too Many Attempts', 'Please try again later.', 'error');
+        } else {
+          showBeautifulAlert('Login Error', 'Something went wrong. Please try again.', 'error');
         }
-        Swal.fire('Login Error', message, 'error');
       }
     });
 
-    // Forgot password handler
+    // Forgot password
     document.getElementById('forgotLink').addEventListener('click', (e) => {
       e.preventDefault();
       Swal.fire({
-        title: 'Reset Password',
-        text: 'Enter your Gmail to receive a password reset link:',
+        title: '<strong>Reset Password</strong>',
+        html: 'Enter your Gmail to receive a password reset link:',
         input: 'email',
         inputPlaceholder: 'your.email@gmail.com',
-        inputAttributes: {
-          autocapitalize: 'off'
-        },
+        inputAttributes: { autocapitalize: 'off' },
         showCancelButton: true,
         confirmButtonText: 'Send Reset Link',
         cancelButtonText: 'Cancel',
+        confirmButtonColor: '#e50914',
+        customClass: { popup: 'swal2-border' },
         preConfirm: (email) => {
-          if (!email || !email.includes('@gmail.com')) {
-            Swal.showValidationMessage('Please enter a valid Gmail address');
+          if (!email || !email.trim().endsWith('@gmail.com')) {
+            Swal.showValidationMessage('Please enter a valid @gmail.com address');
           }
-          return email;
+          return email.trim().toLowerCase();
         }
       }).then((result) => {
         if (result.isConfirmed) {
-          Swal.fire({
-            title: 'Sending...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-          });
+          showBeautifulAlert('Sending...', 'Please wait...', 'loading');
           sendPasswordResetEmail(auth, result.value)
             .then(() => {
               Swal.close();
-              Swal.fire('Success!', 'Password reset email sent. Check your inbox.', 'success');
+              showBeautifulAlert('Success!', 'Password reset email sent. Check your inbox.', 'success');
             })
             .catch(() => {
               Swal.close();
-              Swal.fire('Error', 'Failed to send reset email. Try again.', 'error');
+              showBeautifulAlert('Error', 'Failed to send reset email. Try again.', 'error');
             });
         }
       });
     });
+
+    // Beautiful alert helper
+    function showBeautifulAlert(title, html, icon, confirmText = 'OK') {
+      const config = {
+        title: title,
+        html: html,
+        icon: icon,
+        confirmButtonText: confirmText,
+        confirmButtonColor: '#e50914',
+        customClass: { popup: 'swal2-border' }
+      };
+
+      if (icon === 'loading') {
+        config.allowOutsideClick = false;
+        config.allowEscapeKey = false;
+        config.didOpen = () => Swal.showLoading();
+        delete config.icon;
+      }
+
+      return Swal.fire(config);
+    }
+
+    // Custom alert styling
+    const style = document.createElement('style');
+    style.textContent = `
+      .swal2-border {
+        border: 2px solid #e50914 !important;
+        border-radius: 16px !important;
+      }
+      .swal2-popup .swal2-styled.swal2-confirm {
+        background: #e50914 !important;
+        border-radius: 10px !important;
+        font-weight: bold !important;
+      }
+      .swal2-popup .swal2-styled.swal2-confirm:hover {
+        background: #c20817 !important;
+      }
+    `;
+    document.head.appendChild(style);
   </script>
 </body>
 </html>
