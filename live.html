@@ -6,7 +6,6 @@
   <title>Live • Wonderland</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
   <style>
     * { box-sizing: border-box; margin:0; padding:0; font-family: 'Segoe UI', sans-serif; }
     body { background:#fff; color:#222; padding-bottom:70px; }
@@ -55,12 +54,19 @@
       border-radius:20px;
       box-shadow:0 6px 18px rgba(0,0,0,0.12);
       font-weight:700;
+      animation: fadeInOut 4s forwards;
+    }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateX(20px); }
+      10% { opacity: 1; transform: translateX(0); }
+      90% { opacity: 1; transform: translateX(0); }
+      100% { opacity: 0; transform: translateX(20px); }
     }
 
     /* timer */
     .timer {
       font-family: monospace;
-      background:#111; color:#fff; padding:6px 10px; border-radius:8px; font-weight:700;
+      background:#111; color:#fff; padding:3px 10px; border-radius:6px; font-weight:700;
     }
 
     footer {
@@ -92,19 +98,21 @@
     </div>
 
     <div style="margin-top:18px; color:#666;">
-      <div class="label-small">Note: Only <strong>bluepay863@gmail.com</strong> can start or stop the live session here. Live auto-stops after 1 hour.</div>
+      <div class="label-small">Note: Only <strong>admins</strong> can start or stop the live session here. Live auto-stops after 1 hour.</div>
     </div>
   </div>
 
   <div id="viewerStack" class="viewer-stack"></div>
 
-  <footer>
-    <a href="dashboard.html" class="footer-btn"><i class="fas fa-home"></i><div class="label-small">Home</div></a>
-    <a href="friends.html" class="footer-btn"><i class="fas fa-users"></i><div class="label-small">Friends</div></a>
-    <a href="profile.html" class="footer-btn"><i class="fas fa-user"></i><div class="label-small">Profile</div></a>
-  </footer>
+  <!-- Audio elements for notifications -->
+  <audio id="joinSound" preload="auto">
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-message-pop-alert-2354.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="leaveSound" preload="auto">
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-quick-click-2301.mp3" type="audio/mpeg">
+  </audio>
 
-  <!-- Firebase (modular) -->
+  <!-- Firebase & Agora -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -119,19 +127,14 @@
       deleteDoc,
       serverTimestamp,
       query,
-      where,
-      orderBy
+      where
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Agora Web SDK (v4-style). If this path fails in your env, replace with your known Agora script URL.
-    // The code below expects AgoraRTC global to exist.
-    const agoraSdkUrl = "https://download.agora.io/sdk/release/AgoraRTC_N.js";
-    const script = document.createElement('script');
-    script.src = agoraSdkUrl;
-    script.async = false;
-    document.head.appendChild(script);
+    // Load Agora SDK
+    const agoraScript = document.createElement('script');
+    agoraScript.src = "https://download.agora.io/sdk/release/AgoraRTC_N.js";
+    document.head.appendChild(agoraScript);
 
-    // ---------- Firebase config (from your provided config) ----------
     const firebaseConfig = {
       apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
       authDomain: "emmy-programmers.firebaseapp.com",
@@ -145,14 +148,11 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // ---------- Agora config ----------
-    const AGORA_APP_ID = "fcfbeea054a84e529a1d984becbb4774"; // provided
-    const CHANNEL_NAME = "live_room"; // single channel for this live instance
-    let client = null;
-    let localTracks = { videoTrack: null, audioTrack: null };
-    let joinedUid = null;
+    // Agora config
+    const AGORA_APP_ID = "fcfbeea054a84e529a1d984becbb4774";
+    const CHANNEL_NAME = "live_room";
 
-    // UI elements
+    // UI refs
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const forceCleanBtn = document.getElementById('forceCleanBtn');
@@ -162,202 +162,198 @@
     const viewerStack = document.getElementById('viewerStack');
     const liveTimerEl = document.getElementById('liveTimer');
     const backBtn = document.getElementById('backBtn');
+    const joinSound = document.getElementById('joinSound');
+    const leaveSound = document.getElementById('leaveSound');
 
-    backBtn.onclick = () => { window.location.href = 'profile.html'; };
+    backBtn.onclick = () => window.location.href = 'profile.html';
 
     // State
     let currentUser = null;
+    let client = null;
+    let localTracks = { videoTrack: null, audioTrack: null };
     let sessionUnsub = null;
     let viewersUnsub = null;
     let liveStopTimeout = null;
     let timerInterval = null;
     let sessionStartTime = null;
+    let activeViewers = new Map(); // uid -> { username, joinedAt }
 
-    // helper: format H:M:S
-    function formatHMS(totalSeconds){
-      const hrs = Math.floor(totalSeconds/3600).toString().padStart(2,'0');
-      const mins = Math.floor((totalSeconds%3600)/60).toString().padStart(2,'0');
-      const secs = Math.floor(totalSeconds%60).toString().padStart(2,'0');
-      return `${hrs}:${mins}:${secs}`;
+    // Firestore refs
+    const sessionDocRef = doc(db, 'live_sessions', 'live_room');
+    const viewersColRef = collection(db, 'live_sessions', 'live_room', 'viewers');
+
+    // === Helper: Format time ===
+    function formatHMS(seconds) {
+      const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+      const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+      const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+      return `${h}:${m}:${s}`;
     }
 
-    function startTimer(startDate){
+    // === Timer ===
+    function startTimer(startDate) {
       clearInterval(timerInterval);
       timerInterval = setInterval(() => {
-        const diff = Math.floor((Date.now() - startDate.getTime())/1000);
-        liveTimerEl.textContent = formatHMS(Math.max(0,diff));
+        const diff = Math.floor((Date.now() - startDate.getTime()) / 1000);
+        liveTimerEl.textContent = formatHMS(Math.max(0, diff));
       }, 1000);
     }
 
-    function stopTimer(){
+    function stopTimer() {
       clearInterval(timerInterval);
       liveTimerEl.textContent = "00:00:00";
     }
 
-    // Viewers UI handling: show temporary chip for each join (and also keep a list of active viewers)
-    const shownChips = new Map(); // uid => timeoutId
+    // === Show viewer chip with animation ===
+    function showViewerChip(message) {
+      const chip = document.createElement('div');
+      chip.className = 'viewer-chip';
+      chip.textContent = message;
+      viewerStack.prepend(chip);
+      setTimeout(() => chip.remove(), 4000);
+    }
 
-    function showViewerChip(username, uid, ttlMs = 3600*1000){
-      // create chip element
-      const id = `viewer_${uid}`;
-      if (shownChips.has(uid)) {
-        // refresh existing
-        clearTimeout(shownChips.get(uid));
-        const existing = document.getElementById(id);
-        if (existing) {
-          existing.textContent = username;
-        }
-      } else {
-        const div = document.createElement('div');
-        div.className = 'viewer-chip';
-        div.id = id;
-        div.textContent = username;
-        viewerStack.prepend(div);
+    // === Play sound ===
+    function playSound(type) {
+      try {
+        if (type === 'join') joinSound.play().catch(() => {});
+        else if (type === 'leave') leaveSound.play().catch(() => {});
+      } catch (e) { console.warn("Sound play failed", e); }
+    }
+
+    // === Ensure session doc exists ===
+    async function ensureSessionDoc() {
+      const snap = await sessionDocRef.get();
+      if (!snap.exists()) {
+        await setDoc(sessionDocRef, {
+          active: false,
+          startedAt: null,
+          hostUid: null,
+          hostEmail: null
+        });
       }
-
-      // set removal after ttlMs
-      const t = setTimeout(() => {
-        const el = document.getElementById(id);
-        if (el) el.remove();
-        shownChips.delete(uid);
-      }, ttlMs);
-
-      shownChips.set(uid, t);
     }
 
-    // Remove all viewer chips immediately
-    function clearViewerChips(){
-      viewerStack.innerHTML = '';
-      shownChips.forEach(t => clearTimeout(t));
-      shownChips.clear();
-    }
-
-    // Firestore helpers: session doc path
-    const sessionDocRef = doc(db, 'live_sessions', 'live_room');
-    const viewersColRef = collection(db, 'live_sessions/live_room/viewers');
-
-    // Listen to session doc to update UI
-    function subscribeSession(){
-      if (sessionUnsub) sessionUnsub(); sessionUnsub = null;
+    // === Subscribe to session ===
+    function subscribeSession() {
+      if (sessionUnsub) sessionUnsub();
       sessionUnsub = onSnapshot(sessionDocRef, (snap) => {
         const data = snap.exists() ? snap.data() : null;
         if (!data || !data.active) {
           hostEmailEl.textContent = '—';
           viewsCountEl.textContent = '0';
-          stopLocalStreamUI();
           stopTimer();
           return;
         }
         hostEmailEl.textContent = data.hostEmail || '—';
-        // if current user is host but not joined to agora client, attempt re-join? We only allow explicit Start.
-        sessionStartTime = data.startedAt ? data.startedAt.toDate() : null;
+        sessionStartTime = data.startedAt?.toDate?.() || null;
         if (sessionStartTime) startTimer(sessionStartTime);
       });
     }
 
-    // Listen to viewers collection to show count and usernames. Also auto-delete old viewer docs older than 1 hour.
-    function subscribeViewers(){
-      if (viewersUnsub) viewersUnsub(); viewersUnsub = null;
-      viewersUnsub = onSnapshot(viewersColRef, async (snap) => {
-        let count = 0;
+    // === Subscribe to viewers with join/leave logic ===
+    function subscribeViewers() {
+      if (viewersUnsub) viewersUnsub();
+      viewersUnsub = onSnapshot(viewersColRef, (snapshot) => {
+        const currentViewers = new Map();
         const now = Date.now();
-        const toDelete = [];
-        snap.docs.forEach(d => {
-          const v = d.data();
-          const joinedAt = v.joinedAt?.toDate ? v.joinedAt.toDate().getTime() : (v.joinedAt ? v.joinedAt : 0);
-          // show only those within 1 hour
-          if (joinedAt && now - joinedAt <= 3600*1000) {
-            count++;
-            // show popup chip
-            showViewerChip(v.username || 'Anon', d.id, Math.max(0, 3600*1000 - (now - joinedAt)));
-          } else {
-            // old -> schedule delete
-            toDelete.push(d.id);
+
+        // Process current snapshot
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          const joinedAt = data.joinedAt?.toDate ? data.joinedAt.toDate().getTime() : (data.joinedAt || 0);
+          if (now - joinedAt <= 3600000) { // within 1 hour
+            currentViewers.set(doc.id, {
+              username: data.username || 'Anon',
+              joinedAt: joinedAt
+            });
           }
         });
-        viewsCountEl.textContent = String(count);
 
-        // cleanup old viewer docs
-        for (const id of toDelete) {
-          try { await deleteDoc(doc(db, `live_sessions/live_room/viewers/${id}`)); } catch(e){ /* ignore */ }
-        }
+        // Detect joins
+        currentViewers.forEach((viewer, uid) => {
+          if (!activeViewers.has(uid)) {
+            showViewerChip(`${viewer.username} joined the live`);
+            playSound('join');
+          }
+        });
+
+        // Detect leaves
+        activeViewers.forEach((_, uid) => {
+          if (!currentViewers.has(uid)) {
+            const viewer = activeViewers.get(uid);
+            if (viewer) {
+              showViewerChip(`${viewer.username} left the live`);
+              playSound('leave');
+            }
+          }
+        });
+
+        // Update state and UI
+        activeViewers = currentViewers;
+        viewsCountEl.textContent = currentViewers.size;
       });
     }
 
-    // Clean old viewers manually
-    async function cleanOldViewers(){
-      try {
-        const snap = await getDocs(viewersColRef);
-        const now = Date.now();
-        for (const d of snap.docs){
-          const v = d.data();
-          const joinedAt = v.joinedAt?.toDate ? v.joinedAt.toDate().getTime() : (v.joinedAt ? v.joinedAt : 0);
-          if (!joinedAt || now - joinedAt > 3600*1000) {
-            await deleteDoc(doc(db, 'live_sessions', 'live_room', 'viewers', d.id));
-          }
+    // === Clean old viewers ===
+    async function cleanOldViewers() {
+      const snap = await getDocs(viewersColRef);
+      const now = Date.now();
+      const promises = [];
+      snap.docs.forEach(doc => {
+        const data = doc.data();
+        const joinedAt = data.joinedAt?.toDate ? data.joinedAt.toDate().getTime() : (data.joinedAt || 0);
+        if (!joinedAt || now - joinedAt > 3600000) {
+          promises.push(deleteDoc(doc.ref));
         }
-        Swal.fire({ icon: 'success', title: 'Cleaned', text: 'Old viewers removed.' });
-      } catch(err){
-        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to clean viewers.' });
-      }
+      });
+      await Promise.all(promises);
+      Swal.fire({ icon: 'success', title: 'Cleaned', text: 'Old viewers removed.' });
     }
 
-    forceCleanBtn.onclick = () => cleanOldViewers();
-
-    // Start local stream & publish to Agora
+    // === Start stream ===
     async function startLocalStream() {
-      // ensure AgoraRTC is loaded
       if (typeof AgoraRTC === 'undefined') {
-        Swal.fire({ icon: 'error', title: 'Agora SDK error', text: 'Agora SDK not loaded. Check internet or CDN path.' });
+        Swal.fire({ icon: 'error', title: 'Agora SDK not loaded', text: 'Check your internet connection.' });
         return;
       }
 
       try {
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        // for free tokenless mode we pass null as token
         const uid = await client.join(AGORA_APP_ID, CHANNEL_NAME, null, null);
-        joinedUid = uid;
-        // create local tracks (mic + camera)
-        const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
-        localTracks.audioTrack = microphoneTrack;
-        localTracks.videoTrack = cameraTrack;
+        const [micTrack, camTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+        localTracks.audioTrack = micTrack;
+        localTracks.videoTrack = camTrack;
 
-        // play local video in local-player
         localPlayer.innerHTML = '';
         const playerDiv = document.createElement('div');
-        playerDiv.id = `local-player-${uid}`;
         playerDiv.style.width = '100%';
         playerDiv.style.height = '100%';
         localPlayer.appendChild(playerDiv);
-        cameraTrack.play(playerDiv);
+        camTrack.play(playerDiv);
+        await client.publish([micTrack, camTrack]);
 
-        // publish
-        await client.publish(Object.values(localTracks));
-        console.log("Published local tracks as host.");
-
-        // Update session doc in Firestore
+        // Create/update session doc
         await setDoc(sessionDocRef, {
           active: true,
           startedAt: serverTimestamp(),
           hostUid: currentUser.uid,
-          hostEmail: currentUser.email || 'host'
-        }, { merge: true });
+          hostEmail: currentUser.email
+        });
 
-        // set auto-stop after 1 hour
+        // Auto-stop after 1 hour
         if (liveStopTimeout) clearTimeout(liveStopTimeout);
-        liveStopTimeout = setTimeout(() => {
-          stopLive(true);
-        }, 3600 * 1000); // 1 hour
+        liveStopTimeout = setTimeout(stopLive, 3600000);
 
-        Swal.fire({ icon: 'success', title: 'Live started', text: 'You are now live.' });
+        Swal.fire({ icon: 'success', title: 'Live started', text: 'You are now live!' });
       } catch (err) {
-        console.error("Failed to start local stream:", err);
-        Swal.fire({ icon: 'error', title: 'Streaming error', text: String(err) });
+        console.error("Start stream error:", err);
+        Swal.fire({ icon: 'error', title: 'Failed to start', text: err.message || 'Unknown error' });
       }
     }
 
-    // Stop local stream & cleanup
-    async function stopLocalStreamUI(){
+    // === Stop stream ===
+    async function stopLocalStreamUI() {
       try {
         if (localTracks.videoTrack) {
           localTracks.videoTrack.stop();
@@ -368,108 +364,72 @@
           localTracks.audioTrack.close();
         }
         if (client) {
-          try { await client.unpublish(Object.values(localTracks)); } catch(e){}
-          try { await client.leave(); } catch(e){}
+          await client.unpublish(Object.values(localTracks).filter(t => t));
+          await client.leave();
         }
-      } catch(e) {
-        console.warn("Error during local cleanup", e);
-      } finally {
+      } catch (e) { console.warn("Cleanup error:", e); }
+      finally {
         localTracks = { videoTrack: null, audioTrack: null };
         client = null;
-        joinedUid = null;
         localPlayer.innerHTML = 'Not streaming';
-        clearViewerChips();
-        if (liveStopTimeout) { clearTimeout(liveStopTimeout); liveStopTimeout = null; }
+        viewerStack.innerHTML = '';
+        activeViewers.clear();
+        if (liveStopTimeout) clearTimeout(liveStopTimeout);
       }
     }
 
-    // Stop live session: update Firestore, stop local tracks
-    async function stopLive(fromAuto=false){
-      try {
-        await updateDoc(sessionDocRef, { active:false });
-      } catch(e){ /* ignore */ }
+    async function stopLive() {
+      await updateDoc(sessionDocRef, { active: false });
       await stopLocalStreamUI();
-      if (fromAuto) {
-        Swal.fire({ icon: 'info', title: 'Live ended', text: 'The live stream has stopped after 1 hour.' });
-      } else {
-        Swal.fire({ icon: 'success', title: 'Stopped', text: 'Live stopped.' });
-      }
       stopTimer();
+      Swal.fire({ icon: 'success', title: 'Live stopped', text: 'Stream ended.' });
     }
 
-    // Enforce that only admin can start/stop
-    function setControlsForUser(isAdmin){
+    // === Button handlers ===
+    startBtn.onclick = async () => {
+      if (currentUser.email !== 'bluepay863@gmail.com') {
+        return Swal.fire({ icon: 'error', title: 'Access denied', text: 'Only admin can start live.' });
+      }
+      await startLocalStream();
+    };
+
+    stopBtn.onclick = () => {
+      if (currentUser.email !== 'bluepay863@gmail.com') return;
+      Swal.fire({
+        title: 'Stop live?',
+        text: "Are you sure you want to end the stream?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, stop'
+      }).then(res => res.isConfirmed && stopLive());
+    };
+
+    forceCleanBtn.onclick = cleanOldViewers;
+
+    // === Initialize ===
+    async function init() {
+      await ensureSessionDoc(); // ✅ Automatically creates collection/doc if missing
+      subscribeSession();
+      subscribeViewers();
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return window.location.href = 'login.html';
+      currentUser = user;
+      setControls(user.email === 'bluepay863@gmail.com');
+      await init();
+    });
+
+    function setControls(isAdmin) {
       startBtn.disabled = !isAdmin;
       stopBtn.disabled = !isAdmin;
     }
 
-    // Button handlers
-    startBtn.onclick = async () => {
-      if (!currentUser) return Swal.fire({ icon:'error', title:'Sign in', text:'Please sign in first.' });
-      if (currentUser.email !== 'bluepay863@gmail.com') {
-        return Swal.fire({ icon:'error', title:'Access denied', text:'Only the host can start live here.' });
-      }
-      // Check if already active
-      const snap = await sessionDocRef.get?.() || null;
-      // We cannot use get() in modular; instead use onSnapshot? We'll check doc then set regardless:
-      // Start local stream and set session doc
-      startLocalStream();
-    };
-
-    stopBtn.onclick = async () => {
-      if (!currentUser) return Swal.fire({ icon:'error', title:'Sign in', text:'Please sign in first.' });
-      if (currentUser.email !== 'bluepay863@gmail.com') {
-        return Swal.fire({ icon:'error', title:'Access denied', text:'Only the host can stop the live.' });
-      }
-      Swal.fire({
-        title: 'Stop live?',
-        text: "Do you want to stop the live stream now?",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, stop',
-        cancelButtonText: 'Keep streaming'
-      }).then(async (res) => {
-        if (res.isConfirmed) {
-          await stopLive(false);
-        }
-      });
-    };
-
-    // Subscribe to session and viewers right away
-    subscribeSession();
-    subscribeViewers();
-
-    // Auth guard
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        // not logged in - redirect to login
-        Swal.fire({ icon: 'info', title: 'Not signed in', text: 'Please sign in to use live features.' }).then(()=> {
-          window.location.href = 'login.html';
-        });
-        return;
-      }
-      currentUser = user;
-      hostEmailEl.textContent = '—';
-      setControlsForUser(user.email === 'bluepay863@gmail.com');
-
-      // If session is active but host is now this user (maybe by reload), we can attempt to resume timer UI
-      // Also we keep listening to viewers in subscribeViewers()
-
-      // If this user is not host, we do not try to publish - viewers will be handled by separate dashboard viewer page.
-    });
-
-    // Cleanup on unload (stop tracks and unsubscribe)
     window.addEventListener('beforeunload', async () => {
-      try {
-        if (joinedUid) {
-          // do not stop the session for others if host page closes unexpectedly
-        }
-        if (sessionUnsub) sessionUnsub();
-        if (viewersUnsub) viewersUnsub();
-        await stopLocalStreamUI();
-      } catch(e){}
+      if (sessionUnsub) sessionUnsub();
+      if (viewersUnsub) viewersUnsub();
+      await stopLocalStreamUI();
     });
-
   </script>
 </body>
 </html>

@@ -19,7 +19,7 @@
       color: #333;
       padding: 20px;
       min-height: 100vh;
-      padding-bottom: 100px; /* Prevent footer overlap */
+      padding-bottom: 100px;
     }
 
     .profile-header {
@@ -45,12 +45,13 @@
       font-size: 24px;
       font-weight: bold;
       color: #e50914;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
 
     .profile-email {
       color: #666;
       font-size: 16px;
+      margin-bottom: 16px;
     }
 
     .info-card {
@@ -102,6 +103,12 @@
     .btn-live {
       background: #e50914;
       color: white;
+    }
+
+    .btn-settings {
+      background: #f0f2f5;
+      color: #333;
+      border: 1px solid #ddd;
     }
 
     .btn-logout {
@@ -166,6 +173,9 @@
     <div class="btn btn-live" id="liveBtn">
       <i class="fas fa-video"></i> Live
     </div>
+    <div class="btn btn-settings" id="settingsBtn">
+      <i class="fas fa-cog"></i> Settings
+    </div>
     <div class="btn btn-logout" id="logoutBtn">
       <i class="fas fa-sign-out-alt"></i> Log Out
     </div>
@@ -187,7 +197,7 @@
   </footer>
 
   <script type="module">
-    // ✅ CORRECT IMPORTS – NO TRAILING SPACES
+    // ✅ FIXED: Removed trailing spaces in URLs
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -217,7 +227,8 @@
       const email = user.email;
       document.getElementById('profileEmail').textContent = email;
 
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      // 🔑 CRITICAL FIX: Read from users/{email}, not users/{uid}
+      const userDoc = await getDoc(doc(db, 'users', email));
       let username = email.split('@')[0];
       let phone = '—';
       let userClass = '—';
@@ -235,44 +246,39 @@
       document.getElementById('profileClass').textContent = userClass;
     }
 
-    // 🔘 SET UP BUTTONS AFTER DOM LOADS
+    // Set up buttons
     document.addEventListener('DOMContentLoaded', () => {
-      // Live button
-      const liveBtn = document.getElementById('liveBtn');
-      if (liveBtn) {
-        liveBtn.addEventListener('click', () => {
-          window.location.href = 'live.html';
-        });
-      }
+      document.getElementById('liveBtn')?.addEventListener('click', () => {
+        window.location.href = 'live.html';
+      });
 
-      // Logout button
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-          Swal.fire({
-            title: 'Are you sure?',
-            text: "You will be logged out of your account.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, log out!',
-            cancelButtonText: 'Cancel',
-            reverseButtons: true
-          }).then((result) => {
-            if (result.isConfirmed) {
-              signOut(auth).then(() => {
-                Swal.fire('Logged out!', 'You have been signed out.', 'success').then(() => {
-                  window.location.href = 'login.html';
-                });
-              }).catch(() => {
-                Swal.fire('Error', 'Failed to log out.', 'error');
+      document.getElementById('settingsBtn')?.addEventListener('click', () => {
+        window.location.href = 'settings.html'; // 👈 Redirects to settings
+      });
+
+      document.getElementById('logoutBtn')?.addEventListener('click', () => {
+        Swal.fire({
+          title: 'Are you sure?',
+          text: "You will be logged out of your account.",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Yes, log out!',
+          cancelButtonText: 'Cancel',
+          reverseButtons: true
+        }).then((result) => {
+          if (result.isConfirmed) {
+            signOut(auth).then(() => {
+              Swal.fire('Logged out!', 'You have been signed out.', 'success').then(() => {
+                window.location.href = 'login.html';
               });
-            }
-          });
+            }).catch(() => {
+              Swal.fire('Error', 'Failed to log out.', 'error');
+            });
+          }
         });
-      }
+      });
     });
 
-    // 🔐 Auth state listener
     onAuthStateChanged(auth, (user) => {
       if (user) {
         loadProfile();

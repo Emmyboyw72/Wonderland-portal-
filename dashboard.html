@@ -149,6 +149,7 @@
             width: 100%;
             height: 220px;
             object-fit: cover;
+            background: #f8f9fa;
         }
 
         .post-body {
@@ -165,7 +166,7 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: #fab1a0;
+            background: #e50914;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -301,6 +302,18 @@
             color: #888;
             margin-top: 40px;
             font-size: 18px;
+        }
+
+        .join-live-btn {
+            background: #e50914;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 16px;
+            font-size: 16px;
         }
 
         footer {
@@ -531,7 +544,8 @@
             serverTimestamp, 
             doc, 
             deleteDoc,
-            onSnapshot
+            onSnapshot,
+            updateDoc
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -548,25 +562,29 @@
         const db = getFirestore(app);
 
         const ADMIN_EMAIL = "bluepay863@gmail.com";
+        const ADMIN_DISPLAY_NAME = "wonderland portal";
         const CHANNEL_NAME = "live_room";
 
         let currentUser = null;
         let postToDelete = null;
         let likedPosts = new Set();
-        let agoraClient = null;
-        let remotePlayer = null;
+        let isJoinedToLive = false;
+        let sessionUnsub = null;
+        let postsUnsub = null;
 
-        const educationImages = Array.from({ length: 100 }, (_, i) =>
-            `https://source.unsplash.com/800x600/?education,book,study,classroom,${i}`
-        );
+        // Working educational images
+        const educationKeywords = [
+            "education", "book", "study", "classroom", "learning", "school", "university", "student", "teacher", "knowledge"
+        ];
 
-        // Load Agora SDK
-        const agoraScript = document.createElement('script');
-        agoraScript.src = "https://download.agora.io/sdk/release/AgoraRTC_N.js";
-        document.head.appendChild(agoraScript);
+        function getRandomImage() {
+            const keyword = educationKeywords[Math.floor(Math.random() * educationKeywords.length)];
+            const seed = Math.floor(Math.random() * 1000);
+            return `https://source.unsplash.com/random/800x600/?${keyword}&${seed}`;
+        }
 
         function getInitials(name) {
-            return name ? name.charAt(0).toUpperCase() : 'U';
+            return name ? name.charAt(0).toUpperCase() : 'W';
         }
 
         function timeAgo(timestamp) {
@@ -583,8 +601,12 @@
         }
 
         function formatLikes(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
             if (num >= 1000) {
-                return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+                const k = num / 1000;
+                if (k < 1.1) return '1k'; // 999 -> 1k
+                if (k % 1 === 0) return k + 'k'; // 2k, 3k
+                return k.toFixed(1).replace(/\.0$/, '') + 'k'; // 1.1k, 2.5k
             }
             return num.toString();
         }
@@ -604,10 +626,16 @@
 
         function toggleSeeMore(contentEl, fullText) {
             const isCollapsed = contentEl.classList.contains('collapsed');
-            contentEl.classList.toggle('collapsed', !isCollapsed);
-            contentEl.textContent = isCollapsed ? fullText : fullText.split(' ').slice(0, 40).join(' ') + '...';
-            const seeMore = contentEl.nextElementSibling;
-            if (seeMore) seeMore.textContent = isCollapsed ? 'See less' : 'See more';
+            if (isCollapsed) {
+                contentEl.classList.remove('collapsed');
+                contentEl.textContent = fullText;
+                contentEl.nextElementSibling.textContent = 'See less';
+            } else {
+                const short = fullText.split(' ').slice(0, 40).join(' ') + '...';
+                contentEl.classList.add('collapsed');
+                contentEl.textContent = short;
+                contentEl.nextElementSibling.textContent = 'See more';
+            }
         }
 
         async function createPost() {
@@ -615,36 +643,36 @@
             if (!content) return showAlert("Post cannot be empty.", true);
 
             try {
-                const imageUrl = educationImages[Math.floor(Math.random() * educationImages.length)];
+                const imageUrl = getRandomImage();
                 const baseLikes = Math.floor(Math.random() * 500) + 500;
 
                 await addDoc(collection(db, "posts"), {
                     userId: currentUser.uid,
-                    username: currentUser.username || currentUser.email.split('@')[0],
+                    username: ADMIN_DISPLAY_NAME,
                     content: content,
                     imageUrl: imageUrl,
                     likes: baseLikes,
-                    timestamp: serverTimestamp()
+                    timestamp: serverTimestamp(),
+                    createdAt: new Date().toISOString()
                 });
 
                 showAlert("Post created successfully!", false);
                 closePopup('postPopup');
                 document.getElementById('postContent').value = '';
-                loadPosts();
             } catch (err) {
                 console.error("Post error:", err);
                 showAlert("Failed to create post.", true);
             }
         }
 
-        function likePost(postId, likeBtn) {
+        async function likePost(postId, likeBtn) {
             if (likedPosts.has(postId)) {
                 showAlert("You already liked this post.", false);
                 return;
             }
 
             const sound = document.getElementById('likeSound');
-            sound.src = "https://www.soundjay.com/buttons/sounds/button-09.mp3";
+            sound.src = "https://assets.mixkit.co/sfx/preview/mixkit-like-tweet-2668.mp3";
             sound.play().catch(() => {});
 
             const statBadge = likeBtn.closest('.post').querySelector('.stat-badge');
@@ -656,6 +684,16 @@
             likeBtn.querySelector('i').className = "fas fa-heart";
             likeBtn.classList.add('liked');
             likedPosts.add(postId);
+
+            // Update in Firestore
+            try {
+                await updateDoc(doc(db, "posts", postId), {
+                    likes: currentLikes
+                });
+            } catch (e) {
+                console.warn("Like update failed:", e);
+            }
+
             showAlert("Liked!", false);
         }
 
@@ -670,51 +708,43 @@
                 await deleteDoc(doc(db, "posts", postToDelete));
                 showAlert("Post deleted successfully!", false);
                 closePopup('deletePopup');
-                loadPosts();
             } catch (err) {
                 console.error("Delete error:", err);
                 showAlert("Failed to delete post.", true);
             }
         }
 
-        function calculateLikes(baseLikes, timestamp) {
-            if (!timestamp?.toDate) return baseLikes;
-            const ageMs = new Date() - timestamp.toDate();
-            const hours = ageMs / (1000 * 60 * 60);
-            const extra = Math.floor(hours / 5) * Math.floor(Math.random() * 4 + 1);
-            return baseLikes + extra;
-        }
-
         function renderPost(post) {
             const timeStr = timeAgo(post.timestamp);
-            const actualLikes = calculateLikes(post.likes, post.timestamp);
-                        const displayLikes = formatLikes(actualLikes);
-            const isOwner = currentUser?.email === ADMIN_EMAIL;
-            const words = post.content.split(' ');
-            const isLong = words.length > 40;
-            const displayText = isLong ? words.slice(0, 40).join(' ') + '...' : post.content;
+            const words = post.content.split(' ').length;
+            const needsSeeMore = words > 40;
+
+            // Ensure username is always "wonderland portal"
+            const displayName = ADMIN_DISPLAY_NAME;
 
             const postEl = document.createElement('div');
             postEl.className = 'post-container';
-            // Escape backticks in content to avoid template literal break
+            
+            // Escape backticks for template literal
             const safeContent = post.content.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+            
             postEl.innerHTML = `
                 <div class="post">
-                    ${isOwner ? `<div class="delete-btn" onclick="requestDeletePost('${post.id}')">×</div>` : ''}
-                    <img src="${post.imageUrl}" class="post-image" alt="Educational" />
+                    ${currentUser && currentUser.email === ADMIN_EMAIL ? `<div class="delete-btn" onclick="event.stopPropagation(); requestDeletePost('${post.id}')">×</div>` : ''}
+                    <img src="${post.imageUrl}" class="post-image" onerror="this.src='https://via.placeholder.com/800x600/e50914/white?text=Educational+Content'">
                     <div class="post-body">
                         <div class="post-header">
-                            <div class="post-avatar">${getInitials(post.username)}</div>
+                            <div class="post-avatar">${getInitials(displayName)}</div>
                             <div class="post-info">
-                                <div class="post-username">${post.username}</div>
+                                <div class="post-username">${displayName}</div>
                                 <div class="post-time">${timeStr}</div>
                             </div>
                         </div>
-                        <div class="post-content ${isLong ? 'collapsed' : ''}">${displayText}</div>
-                        ${isLong ? `<div class="see-more" onclick="toggleSeeMore(this.previousElementSibling, \`${safeContent}\`)">See more</div>` : ''}
+                        <div class="post-content ${needsSeeMore ? 'collapsed' : ''}">${needsSeeMore ? post.content.split(' ').slice(0, 40).join(' ') + '...' : post.content}</div>
+                        ${needsSeeMore ? `<div class="see-more" onclick="toggleSeeMore(this.previousElementSibling, \`${safeContent}\`)">See more</div>` : ''}
                         <div class="stats">
-                            <div class="stat-badge" data-likes="${actualLikes}">
-                                <i class="fas fa-heart"></i> ${displayLikes}
+                            <div class="stat-badge" data-likes="${post.likes}">
+                                <i class="fas fa-heart"></i> ${formatLikes(post.likes)}
                             </div>
                         </div>
                         <div class="post-actions">
@@ -729,160 +759,102 @@
             return postEl;
         }
 
-        async function loadPosts() {
-            const feed = document.getElementById('feed');
-            try {
-                const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
-                const snap = await getDocs(q);
-                const posts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                if (posts.length === 0) {
-                    feed.innerHTML = `<div class="empty-feed">No educational posts yet.</div>`;
-                    return;
-                }
-
-                feed.innerHTML = '';
-                posts.forEach(post => {
-                    feed.appendChild(renderPost(post));
-                });
-            } catch (err) {
-                console.error("Load posts error:", err);
-                feed.innerHTML = `<div class="empty-feed">Failed to load posts.</div>`;
-            }
-        }
-
-        // --- LIVE STREAM HANDLING ---
-        async function initAgoraViewer() {
-            // Wait for AgoraRTC to load
-            if (typeof AgoraRTC === 'undefined') {
-                setTimeout(initAgoraViewer, 300);
+        function renderLiveTab(isActive, hostEmail) {
+            const liveFeed = document.getElementById('liveFeed');
+            if (!isActive) {
+                liveFeed.innerHTML = `<div class="no-live">No live stream available</div>`;
                 return;
             }
 
-            try {
-                agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-                await agoraClient.join("fcfbeea054a84e529a1d984becbb4774", CHANNEL_NAME, null, null);
-
-                agoraClient.on("user-published", async (user, mediaType) => {
-                    await agoraClient.subscribe(user, mediaType);
-                    if (mediaType === "video") {
-                        const playerContainer = document.getElementById('liveVideoPlayer');
-                        playerContainer.innerHTML = '';
-                        remotePlayer = document.createElement('div');
-                        remotePlayer.id = `player-${user.uid}`;
-                        remotePlayer.style.width = '100%';
-                        remotePlayer.style.height = '100%';
-                        playerContainer.appendChild(remotePlayer);
-                        user.videoTrack.play(remotePlayer);
-                    }
-                });
-
-                agoraClient.on("user-unpublished", (user, mediaType) => {
-                    if (mediaType === "video" && remotePlayer) {
-                        remotePlayer.remove();
-                        remotePlayer = null;
-                    }
-                });
-
-            } catch (e) {
-                console.error("Agora viewer error:", e);
-                document.getElementById('liveVideoPlayer').innerHTML = 'Failed to load stream';
-            }
-        }
-
-        function cleanupAgora() {
-            if (agoraClient) {
-                agoraClient.leave().catch(console.warn);
-                agoraClient = null;
-            }
-            if (remotePlayer) {
-                remotePlayer.remove();
-                remotePlayer = null;
-            }
-        }
-
-        function renderLiveTab(isLive, lastLiveTime = null) {
-            const liveFeed = document.getElementById('liveFeed');
-            if (isLive) {
-                liveFeed.innerHTML = `
-                    <div class="live-container">
-                        <div id="liveVideoPlayer">Connecting...</div>
-                        <div class="live-info">
-                            <h3>Admin is LIVE now</h3>
-                            <p>Join the educational stream</p>
-                        </div>
+            liveFeed.innerHTML = `
+                <div class="live-container">
+                    <div id="liveVideoPlayer">Live stream will appear here</div>
+                    <div class="live-info">
+                        <h3>Live Now</h3>
+                        <p>Host: ${ADMIN_DISPLAY_NAME}</p>
+                        <button class="join-live-btn" id="joinLiveBtn">${isJoinedToLive ? 'Leave Live' : 'Join Live'}</button>
                     </div>
-                `;
-                // Initialize Agora viewer only when tab is active and live
-                setTimeout(initAgoraViewer, 500);
-            } else {
-                let statusText = "No live class available";
-                if (lastLiveTime) {
-                    statusText = `Last live: ${timeAgo(lastLiveTime)}`;
+                </div>
+            `;
+
+            document.getElementById('joinLiveBtn').onclick = () => {
+                if (isJoinedToLive) {
+                    isJoinedToLive = false;
+                    document.getElementById('joinLiveBtn').textContent = 'Join Live';
+                    showAlert("Left live stream", false);
+                } else {
+                    isJoinedToLive = true;
+                    document.getElementById('joinLiveBtn').textContent = 'Leave Live';
+                    showAlert("Joined live stream!", false);
                 }
-                liveFeed.innerHTML = `
-                    <div class="no-live">
-                        <i class="fas fa-video-slash" style="font-size:48px; margin-bottom:16px; color:#e50914;"></i>
-                        <p>${statusText}</p>
-                    </div>
-                `;
-            }
+            };
         }
 
-        function subscribeToLiveSession() {
-            const sessionRef = doc(db, 'live_sessions', 'live_room');
-            onSnapshot(sessionRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    if (data.active) {
-                        renderLiveTab(true);
-                        return;
-                    }
+        function loadPosts() {
+            const feed = document.getElementById('feed');
+            if (postsUnsub) postsUnsub();
+
+            const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+            postsUnsub = onSnapshot(q, (snapshot) => {
+                feed.innerHTML = '';
+                if (snapshot.empty) {
+                    feed.innerHTML = '<div class="empty-feed">No posts yet</div>';
+                    return;
                 }
-                // Use last known startedAt if exists
-                const lastActive = docSnap.exists() && docSnap.data().startedAt 
-                    ? docSnap.data().startedAt 
-                    : null;
-                renderLiveTab(false, lastActive);
+
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    // Calculate real-time likes with hourly increment (max 5500)
+                    const baseLikes = data.likes || 500;
+                    const createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
+                    const now = new Date();
+                    const hoursElapsed = (now - createdAt) / (1000 * 60 * 60);
+                    const extraLikes = Math.min(Math.floor(hoursElapsed / 12) * 5, 5000); // +5 every 12 hours
+                    const currentLikes = Math.min(baseLikes + extraLikes, 5500);
+
+                    // Update Firestore if likes changed
+                    if (currentLikes !== data.likes) {
+                        updateDoc(doc.ref, { likes: currentLikes }).catch(console.warn);
+                    }
+
+                    feed.appendChild(renderPost({ ...data, id: doc.id, likes: currentLikes }));
+                });
+            }, (error) => {
+                console.error("Posts load error:", error);
+                feed.innerHTML = '<div class="empty-feed">Failed to load posts</div>';
             });
         }
 
-        // --- TAB SWITCHING ---
+        function loadLiveStatus() {
+            const sessionRef = doc(db, 'live_sessions', 'live_room');
+            if (sessionUnsub) sessionUnsub();
+            
+            sessionUnsub = onSnapshot(sessionRef, (docSnap) => {
+                const isActive = docSnap.exists() && docSnap.data().active;
+                renderLiveTab(isActive, ADMIN_DISPLAY_NAME);
+            }, (error) => {
+                console.error("Live status error:", error);
+                renderLiveTab(false, ADMIN_DISPLAY_NAME);
+            });
+        }
+
+        // Tab switching
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                 tab.classList.add('active');
-                const target = tab.dataset.tab;
-                document.getElementById(`${target}Tab`).classList.add('active');
-
-                if (target === 'live') {
-                    subscribeToLiveSession();
-                } else {
-                    cleanupAgora();
-                }
+                document.getElementById(tab.dataset.tab + 'Tab').classList.add('active');
             });
         });
 
-        // --- GLOBAL FUNCTIONS (accessible from HTML onclick) ---
-        window.toggleSeeMore = toggleSeeMore;
-        window.likePost = likePost;
-        window.requestDeletePost = requestDeletePost;
-        window.closePopup = closePopup;
-        window.createPost = createPost;
-        window.confirmDeletePost = confirmDeletePost;
-
-        // --- AUTH & INIT ---
+        // Initialize
         onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                window.location.href = 'login.html';
-                return;
-            }
-
+            if (!user) return window.location.href = 'login.html';
             currentUser = user;
-            // Get username from Firestore or fallback to email prefix
-            const userInitial = (user.email || '').split('@')[0].charAt(0).toUpperCase();
-            document.getElementById('headerUserInitial').textContent = userInitial;
+
+            // Set header initial to "W" for wonderland portal
+            document.getElementById('headerUserInitial').textContent = getInitials(ADMIN_DISPLAY_NAME);
 
             // Show post button only for admin
             if (user.email === ADMIN_EMAIL) {
@@ -890,10 +862,14 @@
             }
 
             loadPosts();
+            loadLiveStatus();
         });
 
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', cleanupAgora);
+        // Cleanup listeners on page unload
+        window.addEventListener('beforeunload', () => {
+            if (postsUnsub) postsUnsub();
+            if (sessionUnsub) sessionUnsub();
+        });
     </script>
 </body>
 </html>

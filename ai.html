@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>wöndèlånd AI</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    html, body, * {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: white;
+      padding: 12px 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .back-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e50914;
+      font-size: 20px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-weight: bold;
+      font-size: 18px;
+      color: #333;
+      flex: 1;
+      text-align: center;
+    }
+
+    .ai-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .ai-icon {
+      width: 80px;
+      height: 80px;
+      background: conic-gradient(from 0deg, #ff0000, #ff9900, #ffff00, #00cc66, #0066ff, #cc00ff, #ff0000);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .ai-icon i {
+      font-size: 36px;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .message {
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .username {
+      font-weight: bold;
+      color: #e50914;
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+
+    .note {
+      color: #777;
+      font-size: 15px;
+      line-height: 1.5;
+      max-width: 300px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="back-btn" id="backBtn">
+      <i class="fas fa-arrow-left"></i>
+    </div>
+    <div class="header-title">AI Assistant</div>
+  </header>
+
+  <div class="ai-container">
+    <div class="ai-icon">
+      <i class="fas fa-robot"></i>
+    </div>
+    <div class="message">We are not available now,</div>
+    <div class="username" id="userName">Loading...</div>
+    <div class="note">Emmy programmers still working hard</div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      // Get username from Firestore (not email)
+      const userDoc = await getDoc(doc(db, 'users', user.email));
+      const username = userDoc.exists() ? userDoc.data().username || user.email.split('@')[0] : user.email.split('@')[0];
+
+      document.getElementById('userName').textContent = username;
+
+      // Back button
+      document.getElementById('backBtn').addEventListener('click', () => {
+        window.history.back(); // or window.location.href = 'friends.html';
+      });
+    });
+  </script>
+</body>
+</html>

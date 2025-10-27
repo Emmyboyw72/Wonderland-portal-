@@ -26,6 +26,7 @@
       flex-direction: column;
       margin: 0;
       padding: 0;
+      position: relative;
     }
 
     header {
@@ -77,6 +78,40 @@
       padding: 8px 0;
     }
 
+    /* === Beautiful Loading Skeleton === */
+    .skeleton-loader {
+      padding: 12px 16px;
+      display: flex;
+      align-items: flex-start;
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .skeleton-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      animation: shimmer 1.5s infinite;
+      margin-right: 12px;
+    }
+    .skeleton-info {
+      flex: 1;
+    }
+    .skeleton-line {
+      height: 14px;
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .skeleton-line.short {
+      width: 60%;
+    }
+    @keyframes shimmer {
+      0% { background-position: -1000px 0; }
+      100% { background-position: 1000px 0; }
+    }
+
     .friend-item {
       display: flex;
       align-items: flex-start;
@@ -85,6 +120,7 @@
       border-bottom: 1px solid #f0f0f0;
       cursor: pointer;
       transition: background 0.2s;
+      position: relative;
     }
 
     .friend-item:hover {
@@ -153,13 +189,49 @@
       flex-shrink: 0;
     }
 
-    /* No loading state — empty list shows message */
-    #friendsList:empty::before {
-      content: "No chats yet";
-      display: block;
+    /* Numbered unread badge */
+    .unread-badge {
+      position: absolute;
+      bottom: -8px;
+      left: 60px;
+      background: #e50914;
+      color: white;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: bold;
+      min-width: 16px;
       text-align: center;
-      padding: 30px;
-      color: #999;
+      display: none;
+    }
+
+    /* Floating AI Button */
+    #aiFloatingBtn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, #ff0000, #ff9900, #ffff00, #00cc66, #0066ff, #cc00ff, #ff0000);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      animation: rotateAI 8s linear infinite;
+    }
+
+    #aiFloatingBtn i {
+      font-size: 24px;
+      color: white;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    @keyframes rotateAI {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
     }
   </style>
 </head>
@@ -176,7 +248,13 @@
   </header>
 
   <div class="friends-list" id="friendsList">
-    <!-- Chats will appear here -->
+    <!-- Beautiful loading skeletons -->
+    <div class="skeleton-loader"><div class="skeleton-avatar"></div><div class="skeleton-info"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>
+    <div class="skeleton-loader"><div class="skeleton-avatar"></div><div class="skeleton-info"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>
+  </div>
+
+  <div id="aiFloatingBtn">
+    <i class="fas fa-robot"></i>
   </div>
 
   <script type="module">
@@ -189,12 +267,10 @@
       getDoc, 
       getDocs,
       setDoc, 
-      addDoc,
       serverTimestamp,
       onSnapshot,
       query,
-      orderBy,
-      where
+      orderBy
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -211,18 +287,17 @@
     const db = getFirestore(app);
 
     const ADMIN_EMAIL = "bluepay863@gmail.com";
+    const ADMIN_DISPLAY_NAME = "wonderland portal";
 
-    // Get first letter for avatar
+    let currentUser = null;
+    const activeMessageListeners = new Map();
+
     function getInitials(name) {
       return (name?.charAt(0) || '?').toUpperCase();
     }
 
-    // Ensure self and admin chats exist
     async function ensureMandatoryChats(user) {
       const uid = user.uid;
-      const email = user.email;
-
-      // Self-chat
       const selfChatId = `${uid}_${uid}`;
       await setDoc(doc(db, 'chats', selfChatId), {
         participants: [uid, uid],
@@ -231,8 +306,7 @@
         createdAt: serverTimestamp()
       }, { merge: true });
 
-      // Admin chat
-      if (email !== ADMIN_EMAIL) {
+      if (user.email !== ADMIN_EMAIL) {
         const adminDoc = await getDoc(doc(db, 'users', ADMIN_EMAIL));
         if (adminDoc.exists()) {
           const adminUid = adminDoc.data().uid;
@@ -247,43 +321,43 @@
       }
     }
 
-    // Add new friend by email
     async function addFriendByEmail(currentUser, friendEmail) {
       if (!friendEmail || friendEmail === currentUser.email) {
         Swal.fire('Invalid', 'Cannot add yourself.', 'warning');
         return;
       }
-
       const friendDoc = await getDoc(doc(db, 'users', friendEmail));
       if (!friendDoc.exists()) {
         Swal.fire('Not Found', 'User not found.', 'error');
         return;
       }
-
       const friendUid = friendDoc.data().uid;
       const ids = [currentUser.uid, friendUid].sort();
       const chatId = ids.join('_');
-
-      // Create chat room
       await setDoc(doc(db, 'chats', chatId), {
         participants: ids,
         createdAt: serverTimestamp()
       }, { merge: true });
-
       Swal.fire('Success', 'Friend added!', 'success');
     }
 
-    // Render friend item
     function renderFriendItem(chat) {
       const item = document.createElement('div');
       item.className = 'friend-item';
-      
+      item.dataset.chatId = chat.id;
+
       const timeStr = chat.lastTimestamp 
         ? chat.lastTimestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : '';
       
       const seenClass = chat.isSentByMe && chat.seen ? 'red' : '';
       const seenIcon = chat.isSentByMe ? `<span class="seen-indicator ${seenClass}">✓✓</span>` : '';
+
+      let badgeHTML = '';
+      if (chat.isAdmin && chat.unreadCount > 0) {
+        const displayCount = chat.unreadCount > 99 ? '99+' : chat.unreadCount;
+        badgeHTML = `<div class="unread-badge">${displayCount}</div>`;
+      }
 
       item.innerHTML = `
         <div class="avatar">${getInitials(chat.name)}</div>
@@ -295,95 +369,168 @@
           </div>
         </div>
         ${timeStr ? `<div class="timestamp">${timeStr}</div>` : ''}
+        ${badgeHTML}
       `;
-      
+
       item.addEventListener('click', () => {
         window.location.href = `messenger.html?peer=${encodeURIComponent(chat.email)}&name=${encodeURIComponent(chat.name)}`;
       });
-      
+
       return item;
     }
 
-    // Load all chats
+    function cleanupListeners() {
+      activeMessageListeners.forEach(unsub => unsub());
+      activeMessageListeners.clear();
+    }
+
+    function listenToMessages(chatId, uid, isAdmin) {
+      if (activeMessageListeners.has(chatId)) return;
+
+      const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'desc'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        let lastMessage = '';
+        let lastTimestamp = null;
+        let isSentByMe = false;
+        let seen = false;
+        let unreadCount = 0;
+
+        if (!snapshot.empty) {
+          const last = snapshot.docs[0].data();
+          lastMessage = last.text || '';
+          lastTimestamp = last.timestamp;
+          isSentByMe = last.senderUid === uid;
+          seen = last.seen || false;
+
+          snapshot.docs.forEach(doc => {
+            const msg = doc.data();
+            if (msg.senderUid !== uid && !msg.seen) {
+              unreadCount++;
+            }
+          });
+        }
+
+        const item = document.querySelector(`.friend-item[data-chat-id="${chatId}"]`);
+        if (item) {
+          const lastMsgEl = item.querySelector('.last-message');
+          const timestampEl = item.querySelector('.timestamp');
+          const seenIndicator = item.querySelector('.seen-indicator');
+          const badgeEl = item.querySelector('.unread-badge');
+
+          if (lastMsgEl) lastMsgEl.textContent = lastMessage || 'Tap to chat';
+          if (timestampEl) {
+            timestampEl.textContent = lastTimestamp 
+              ? lastTimestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : '';
+          }
+          if (seenIndicator) {
+            seenIndicator.className = `seen-indicator ${isSentByMe && seen ? 'red' : ''}`;
+          }
+
+          if (isAdmin && unreadCount > 0) {
+            const displayCount = unreadCount > 99 ? '99+' : unreadCount;
+            if (badgeEl) {
+              badgeEl.textContent = displayCount;
+              badgeEl.style.display = 'block';
+            } else {
+              const badge = document.createElement('div');
+              badge.className = 'unread-badge';
+              badge.textContent = displayCount;
+              item.appendChild(badge);
+            }
+          } else if (badgeEl) {
+            badgeEl.style.display = 'none';
+          }
+        }
+      });
+
+      activeMessageListeners.set(chatId, unsubscribe);
+    }
+
     async function loadFriendsList(user) {
       const container = document.getElementById('friendsList');
       const uid = user.uid;
 
-      const chatsQuery = query(collection(db, 'chats'), orderBy('createdAt', 'desc'));
-      onSnapshot(chatsQuery, async (snapshot) => {
-        const chatList = [];
-        for (const docSnap of snapshot.docs) {
-          const chatData = docSnap.data();
-          if (!chatData.participants || !chatData.participants.includes(uid)) continue;
+      cleanupListeners();
 
-          let name = 'Unknown', email = '', isSelf = false, isAdmin = false;
+      // Show loading skeletons
+      container.innerHTML = `
+        <div class="skeleton-loader"><div class="skeleton-avatar"></div><div class="skeleton-info"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>
+        <div class="skeleton-loader"><div class="skeleton-avatar"></div><div class="skeleton-info"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>
+      `;
 
-          if (chatData.self) {
-            name = 'Saved Messages';
-            email = user.email;
-            isSelf = true;
-          } else if (chatData.type === 'admin') {
-            name = 'Admin';
-            email = ADMIN_EMAIL;
-            isAdmin = true;
-          } else {
-            const otherUid = chatData.participants.find(id => id !== uid);
-            if (otherUid) {
-              const usersSnap = await getDocs(collection(db, 'users'));
-              let found = null;
-              usersSnap.forEach(u => {
-                if (u.data().uid === otherUid) found = u.data();
-              });
-              if (found) {
-                name = found.username || found.email.split('@')[0];
-                email = found.email;
-              } else {
-                name = 'User';
-                email = 'unknown';
-              }
+      const chatsQuery = query(collection(db, 'chats'));
+      const chatSnapshot = await getDocs(chatsQuery);
+      const userDocs = await getDocs(collection(db, 'users'));
+
+      const chatList = [];
+      for (const docSnap of chatSnapshot.docs) {
+        const chatData = docSnap.data();
+        if (!chatData.participants || !chatData.participants.includes(uid)) continue;
+
+        let name = 'Unknown', email = '', isSelf = false, isAdmin = false;
+
+        if (chatData.self) {
+          name = 'Saved Messages';
+          email = user.email;
+          isSelf = true;
+        } else if (chatData.type === 'admin') {
+          name = ADMIN_DISPLAY_NAME;
+          email = ADMIN_EMAIL;
+          isAdmin = true;
+        } else {
+          const otherUid = chatData.participants.find(id => id !== uid);
+          if (otherUid) {
+            let found = null;
+            userDocs.forEach(u => {
+              if (u.data().uid === otherUid) found = u.data();
+            });
+            if (found) {
+              name = found.username || found.email.split('@')[0];
+              email = found.email;
+            } else {
+              name = 'User';
+              email = 'unknown';
             }
           }
-
-          // Get last message
-          let lastMessage = '', lastTimestamp = null, isSentByMe = false, seen = false;
-          try {
-            const msgRef = collection(db, 'chats', docSnap.id, 'messages');
-            const msgQ = query(msgRef, orderBy('timestamp', 'desc'));
-            const msgSnap = await getDocs(msgQ);
-            if (!msgSnap.empty) {
-              const last = msgSnap.docs[0].data();
-              lastMessage = last.text || '';
-              lastTimestamp = last.timestamp;
-              isSentByMe = last.senderUid === uid;
-              seen = last.seen || false;
-            }
-          } catch (e) {
-            console.warn("Last message load failed", e);
-          }
-
-          chatList.push({ id: docSnap.id, name, email, lastMessage, lastTimestamp, isSelf, isAdmin, isSentByMe, seen });
         }
 
-        // Sort: self, admin, then by time
-        chatList.sort((a, b) => {
-          if (a.isSelf) return -1;
-          if (b.isSelf) return 1;
-          if (a.isAdmin) return -1;
-          if (b.isAdmin) return 1;
-          return (b.lastTimestamp?.toDate?.() || new Date(0)) - (a.lastTimestamp?.toDate?.() || new Date(0));
+        chatList.push({ 
+          id: docSnap.id, 
+          name, 
+          email, 
+          isSelf, 
+          isAdmin 
         });
+      }
 
-        // Render
-        container.innerHTML = '';
-        chatList.forEach(chat => {
-          container.appendChild(renderFriendItem(chat));
-        });
+      chatList.sort((a, b) => {
+        if (a.isSelf) return -1;
+        if (b.isSelf) return 1;
+        if (a.isAdmin) return -1;
+        if (b.isAdmin) return 1;
+        return 0;
+      });
+
+      // Render actual chats
+      container.innerHTML = '';
+      chatList.forEach(chat => {
+        const placeholderChat = {
+          ...chat,
+          lastMessage: '',
+          lastTimestamp: null,
+          isSentByMe: false,
+          seen: false,
+          unreadCount: 0
+        };
+        container.appendChild(renderFriendItem(placeholderChat));
+        listenToMessages(chat.id, uid, chat.isAdmin);
       });
     }
 
-    // === INIT ===
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = 'login.html';
+      currentUser = user;
 
       const userDoc = await getDoc(doc(db, 'users', user.email));
       if (!userDoc.exists()) {
@@ -394,12 +541,10 @@
       await ensureMandatoryChats(user);
       loadFriendsList(user);
 
-      // Back to dashboard
       document.getElementById('backBtn').addEventListener('click', () => {
         window.location.href = 'dashboard.html';
       });
 
-      // Add friend
       document.getElementById('addFriendBtn').addEventListener('click', async () => {
         const { value: email } = await Swal.fire({
           title: 'Add Friend',
@@ -409,10 +554,16 @@
           confirmButtonColor: '#e50914',
           showCancelButton: true
         });
-        if (email) {
-          await addFriendByEmail(user, email);
-        }
+        if (email) await addFriendByEmail(user, email);
       });
+
+      document.getElementById('aiFloatingBtn').addEventListener('click', () => {
+        window.location.href = 'ai.html';
+      });
+    });
+
+    window.addEventListener('beforeunload', () => {
+      cleanupListeners();
     });
   </script>
 </body>
