@@ -215,10 +215,12 @@
       getDoc, 
       getDocs,
       setDoc, 
+      deleteDoc,
       serverTimestamp,
       onSnapshot,
       query,
-      orderBy
+      orderBy,
+      where
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -295,6 +297,7 @@
       const item = document.createElement('div');
       item.className = 'friend-item';
       item.dataset.chatId = chat.id;
+      item.dataset.peerEmail = chat.email;
 
       const timeStr = chat.lastTimestamp 
         ? chat.lastTimestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -315,8 +318,52 @@
         ${timeStr ? `<div class="timestamp">${timeStr}</div>` : ''}
       `;
 
+      // Click to open chat
       item.addEventListener('click', () => {
         window.location.href = `messenger.html?peer=${encodeURIComponent(chat.email)}&name=${encodeURIComponent(chat.name)}`;
+      });
+
+      // Long press to delete chat
+      let pressTimer;
+      const startPress = () => {
+        pressTimer = setTimeout(async () => {
+          const result = await Swal.fire({
+            title: 'Delete Chat?',
+            text: `This will permanently delete all messages with ${chat.name}.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e50914',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Delete'
+          });
+          if (result.isConfirmed) {
+            try {
+              // Delete all messages in the chat
+              const messagesRef = collection(db, 'chats', chat.id, 'messages');
+              const messageSnapshot = await getDocs(messagesRef);
+              const batch = [];
+              messageSnapshot.forEach(doc => batch.push(deleteDoc(doc.ref)));
+              await Promise.all(batch);
+
+              // Delete the chat doc itself
+              await deleteDoc(doc(db, 'chats', chat.id));
+
+              // Remove from DOM
+              item.remove();
+            } catch (err) {
+              console.error("Delete error:", err);
+              Swal.fire('Error', 'Failed to delete chat.', 'error');
+            }
+          }
+        }, 600);
+      };
+
+      const cancelPress = () => clearTimeout(pressTimer);
+
+      item.addEventListener('mousedown', startPress);
+      item.addEventListener('touchstart', startPress);
+      ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev => {
+        item.addEventListener(ev, cancelPress);
       });
 
       return item;
@@ -327,7 +374,7 @@
       activeMessageListeners.clear();
     }
 
-    function listenToMessages(chatId, uid) {
+    function listenToMessages(chatId, uid, peerEmail) {
       if (activeMessageListeners.has(chatId)) return;
 
       const msgRef = collection(db, 'chats', chatId, 'messages');
@@ -372,7 +419,6 @@
       const container = document.getElementById('friendsList');
       const uid = user.uid;
 
-      // Show loader if not already shown
       if (!loaderShown) {
         loaderShown = true;
         Swal.fire({
@@ -407,16 +453,18 @@
             name = 'Saved Messages';
             email = user.email;
             isSelf = true;
-          } else if (chatData.type === 'admin') {
-            name = ADMIN_DISPLAY_NAME;
-            email = ADMIN_EMAIL;
-            isAdmin = true;
           } else {
             const otherUid = chatData.participants.find(id => id !== uid);
-            if (otherUid && userDocs.has(otherUid)) {
-              const userData = userDocs.get(otherUid);
-              name = userData.username || userData.email.split('@')[0];
-              email = userData.email;
+            if (!otherUid) continue;
+
+            const otherUser = userDocs.get(otherUid);
+            if (otherUser && otherUser.email === ADMIN_EMAIL) {
+              name = ADMIN_DISPLAY_NAME;
+              email = ADMIN_EMAIL;
+              isAdmin = true;
+            } else if (otherUser) {
+              name = otherUser.username || otherUser.email?.split('@')[0] || 'User';
+              email = otherUser.email || 'unknown';
             } else {
               name = 'User';
               email = 'unknown';
@@ -437,7 +485,7 @@
           if (b.isSelf) return 1;
           if (a.isAdmin) return -1;
           if (b.isAdmin) return 1;
-          return a.name.localeCompare(b.name);
+          return (a.name || '').localeCompare(b.name || '');
         });
 
         container.innerHTML = '';
@@ -450,10 +498,9 @@
             seen: false
           };
           container.appendChild(renderFriendItem(placeholderChat));
-          listenToMessages(chat.id, uid);
+          listenToMessages(chat.id, uid, chat.email);
         });
 
-        // Mark data as loaded
         dataLoaded = true;
         maybeCloseLoader();
       }, (error) => {
@@ -464,7 +511,6 @@
     }
 
     function maybeCloseLoader() {
-      // Keep loader visible for at least 800ms for UX
       setTimeout(() => {
         if (loaderShown && dataLoaded) {
           Swal.close();
