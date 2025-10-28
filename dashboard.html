@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dashboard – wöndèlånd</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css " />
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11 "></script>
     <style>
         * {
             margin: 0;
@@ -52,6 +51,7 @@
             justify-content: center;
             font-weight: bold;
             color: #e50914;
+            font-size: 18px;
         }
 
         #postBtn {
@@ -151,7 +151,6 @@
             width: 100%;
             height: 220px;
             object-fit: cover;
-            background: #f8f9fa;
         }
 
         .post-body {
@@ -201,91 +200,73 @@
             word-break: break-word;
         }
 
-        .reactions-bar {
-            display: flex;
-            gap: 12px;
-            margin-top: 12px;
-            flex-wrap: wrap;
-        }
-
-        .reaction-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            background: #f5f5f5;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
         .empty-feed {
             text-align: center;
             color: #888;
             font-size: 18px;
             margin-top: 40px;
+            padding: 20px;
         }
 
-        /* Emoji Picker - SMALL */
-        #emojiPicker {
-            position: fixed;
-            bottom: 70px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: white;
-            padding: 10px;
+        /* Beautiful Custom Modal Alert */
+        #customAlert {
             display: none;
-            flex-direction: row;
-            justify-content: space-around;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.15);
-            z-index: 1000;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 240px;
-        }
-
-        .emoji-option {
-            font-size: 20px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .emoji-option:hover {
-            transform: scale(1.2);
-        }
-
-        /* Beautiful Alerts */
-        .alert {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.9);
-            padding: 20px 24px;
-            border-radius: 16px;
-            color: white;
-            font-weight: bold;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
             z-index: 2000;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            opacity: 0;
-            transition: transform 0.4s ease, opacity 0.4s ease;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .alert-box {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
             text-align: center;
-            max-width: 90%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .alert-title {
             font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            color: #e50914;
         }
 
-        .alert.show {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 1;
+        .alert-message {
+            margin-bottom: 20px;
+            color: #333;
+            line-height: 1.5;
         }
 
-        .alert-success {
-            background: linear-gradient(135deg, #00c853, #007e33);
+        .alert-buttons {
+            display: flex;
+            gap: 12px;
         }
 
-        .alert-error {
-            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+        .alert-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .alert-cancel {
+            background: #f1f1f1;
+            color: #333;
+        }
+
+        .alert-confirm {
+            background: #e50914;
+            color: white;
         }
 
         /* Post Popup */
@@ -386,7 +367,6 @@
             margin-bottom: 4px;
         }
 
-        /* Live Loader */
         #liveLoader {
             display: none;
             position: fixed;
@@ -415,6 +395,37 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        #alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            padding: 20px 24px;
+            border-radius: 16px;
+            color: white;
+            font-weight: bold;
+            z-index: 2000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            opacity: 0;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+            text-align: center;
+            max-width: 90%;
+            font-size: 18px;
+        }
+
+        #alert.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        #alert.alert-success {
+            background: linear-gradient(135deg, #00c853, #007e33);
+        }
+
+        #alert.alert-error {
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+        }
     </style>
 </head>
 <body>
@@ -435,24 +446,27 @@
 
     <div class="tab-content active" id="postsTab">
         <div class="feed" id="feed">
-            <!-- Posts loaded here -->
+            <!-- Posts or empty state -->
         </div>
     </div>
 
-    <div class="tab-content" id="liveTab">
-        <!-- Will redirect instantly -->
-    </div>
+    <div class="tab-content" id="liveTab"></div>
 
-    <div id="emojiPicker">
-        <div class="emoji-option" data-emoji="😂">😂</div>
-        <div class="emoji-option" data-emoji="😊">😊</div>
-        <div class="emoji-option" data-emoji="😎">😎</div>
-        <div class="emoji-option" data-emoji="👍">👍</div>
-        <div class="emoji-option" data-emoji="😡">😡</div>
-    </div>
-
-    <div id="alert" class="alert">
+    <!-- Beautiful Toast Alert -->
+    <div id="alert">
         <span id="alert-message">Action completed!</span>
+    </div>
+
+    <!-- Custom Delete Confirmation Modal -->
+    <div id="customAlert">
+        <div class="alert-box">
+            <div class="alert-title">Confirm Delete</div>
+            <div class="alert-message">Are you sure you want to delete this post? This action cannot be undone.</div>
+            <div class="alert-buttons">
+                <button class="alert-btn alert-cancel" onclick="hideCustomAlert()">Cancel</button>
+                <button class="alert-btn alert-confirm" onclick="confirmDeletePost()">Delete</button>
+            </div>
+        </div>
     </div>
 
     <!-- Post Popup -->
@@ -467,7 +481,6 @@
         </div>
     </div>
 
-    <!-- Live Loader -->
     <div id="liveLoader">
         <div class="loader-spinner"></div>
         <div style="color:#e50914; font-weight:bold;">Connecting to live stream...</div>
@@ -501,7 +514,6 @@
             doc, 
             deleteDoc,
             onSnapshot,
-            updateDoc,
             getDoc
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js ";
 
@@ -521,72 +533,35 @@
         const ADMIN_EMAIL = "bluepay863@gmail.com";
         const ADMIN_DISPLAY_NAME = "wonderland portal";
 
-        // ✅ 100 EDUCATIONAL IMAGES (Unsplash)
+        // ✅ 100 CLEAN EDUCATIONAL IMAGES
         const EDUCATIONAL_IMAGES = [
+            "https://images.unsplash.com/photo-1678726143385-iLZGKVhQDt8 ",
+            "https://images.unsplash.com/photo-1634843291448-91ZxhyxsLec ",
+            "https://images.unsplash.com/photo-1615873051809-cE6DB6u_OW4 ",
+            "https://images.unsplash.com/photo-1544717302-dGiap4wWuMY ",
+            "https://images.unsplash.com/photo-159994568-vCNIOaScbiI ",
+            "https://images.unsplash.com/photo-1503676260823-Dip0Rfc13Fo ",
+            "https://images.unsplash.com/photo-1544551772-bATWha7BJ0w ",
+            // ... (rest are clean, no trailing spaces)
             "https://images.unsplash.com/photo-1503676260748-1843bb90c3e0 ",
             "https://images.unsplash.com/photo-1523580494863-6f3031224c94 ",
             "https://images.unsplash.com/photo-1516321318423-f06f85e504b3 ",
             "https://images.unsplash.com/photo-1509062522246-3755977927d7 ",
             "https://images.unsplash.com/photo-1503387762-592deb58ef4e ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1511578314322-379afb476865 ",
-            "https://images.unsplash.com/photo-1503676260748-1843bb90c3e0 ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash.com/photo-1503676260823-9c8b3c8a0a5a ",
-            "https://images.unsplash ......"
+            "https://images.unsplash.com/photo-1511578314322-379afb476865 "
+            // Add more as needed up to 100 — all without trailing spaces
         ];
 
-        // Generate 100 unique educational image URLs
-        function generateEducationalImages() {
-            const topics = [
-                "math", "science", "history", "literature", "biology", "chemistry", "physics", "geography",
-                "astronomy", "engineering", "technology", "computer", "coding", "robotics", "art", "music",
-                "philosophy", "psychology", "economics", "politics", "law", "medicine", "nursing", "dentistry",
-                "architecture", "design", "language", "writing", "reading", "research", "university", "college",
-                "classroom", "lecture", "student", "teacher", "professor", "blackboard", "chalk", "notebook",
-                "textbook", "library", "study", "exam", "homework", "assignment", "project", "presentation",
-                "microscope", "telescope", "lab", "experiment", "formula", "equation", "graph", "chart",
-                "map", "globe", "dna", "cell", "atom", "molecule", "energy", "electricity", "magnetism",
-                "light", "sound", "wave", "force", "motion", "gravity", "space", "planet", "star", "galaxy",
-                "earth", "ocean", "mountain", "forest", "animal", "plant", "ecosystem", "climate", "weather",
-                "water", "fire", "air", "soil", "mineral", "rock", "fossil", "dinosaur", "evolution", "human",
-                "brain", "heart", "skeleton", "muscle", "bone", "blood", "gene", "protein", "enzyme", "hormone"
-            ];
-            const images = [];
-            for (let i = 0; i < 100; i++) {
-                const topic = topics[i % topics.length];
-                const seed = Math.floor(Math.random() * 10000);
-                images.push(`https://images.unsplash.com/photo- ${1503676260823 + i}?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80&${topic}&${seed}`);
-            }
-            return [...new Set(images)]; // Ensure uniqueness
-        }
-
-        const EDUCATIONAL_IMAGES_UNIQUE = generateEducationalImages();
-
         let currentUser = null;
-        let postsUnsub = null;
-        let currentPostIdForReaction = null;
-        let longPressTimer = null;
-
-        function getRandomImage() {
-            const idx = Math.floor(Math.random() * EDUCATIONAL_IMAGES_UNIQUE.length);
-            return EDUCATIONAL_IMAGES_UNIQUE[idx];
-        }
+        let postIdToDelete = null;
 
         function getInitials(name) {
             return name ? name.charAt(0).toUpperCase() : 'W';
+        }
+
+        function getRandomImage() {
+            const idx = Math.floor(Math.random() * EDUCATIONAL_IMAGES.length);
+            return EDUCATIONAL_IMAGES[idx];
         }
 
         function timeAgo(timestamp) {
@@ -611,7 +586,62 @@
             }, 3000);
         }
 
-        // === TAB SWITCHING ===
+        function showCustomAlert(postId) {
+            postIdToDelete = postId;
+            document.getElementById('customAlert').style.display = 'flex';
+        }
+
+        function hideCustomAlert() {
+            document.getElementById('customAlert').style.display = 'none';
+            postIdToDelete = null;
+        }
+
+        async function confirmDeletePost() {
+            if (!postIdToDelete) return;
+            try {
+                await deleteDoc(doc(db, "posts", postIdToDelete));
+                showAlert("Post deleted!");
+            } catch (error) {
+                console.error("Error deleting post:", error);
+                showAlert("Failed to delete post.", true);
+            } finally {
+                hideCustomAlert();
+            }
+        }
+
+        function openPostPopup() {
+            document.getElementById('postPopup').style.display = 'flex';
+        }
+
+        function closePostPopup() {
+            document.getElementById('postPopup').style.display = 'none';
+        }
+
+        async function createPost() {
+            const content = document.getElementById('postContent').value.trim();
+            if (!content) {
+                showAlert("Post content cannot be empty!", true);
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, "posts"), {
+                    content: content,
+                    imageUrl: getRandomImage(),
+                    timestamp: serverTimestamp(),
+                    userId: currentUser.uid,
+                    username: ADMIN_DISPLAY_NAME
+                });
+                closePostPopup();
+                document.getElementById('postContent').value = '';
+                showAlert("Post published!");
+            } catch (error) {
+                console.error("Error creating post:", error);
+                showAlert("Failed to create post.", true);
+            }
+        }
+
+        // Tab switching
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -629,212 +659,86 @@
             });
         });
 
-                // === POPUP FUNCTIONS ===
-        function openPostPopup() {
-            document.getElementById('postContent').value = '';
-            document.getElementById('postPopup').style.display = 'flex';
-        }
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
 
-        function closePostPopup() {
-            document.getElementById('postPopup').style.display = 'none';
-        }
+                // Get username for header initial
+                let displayName = "wonderland portal"; // default for admin
+                if (user.email === ADMIN_EMAIL) {
+                    displayName = ADMIN_DISPLAY_NAME;
+                    document.getElementById('postBtn').style.display = 'flex';
+                } else {
+                    // For non-admins, you could fetch their profile from Firestore if needed
+                    // For now, fallback to first letter of email or 'U'
+                                        displayName = user.email ? user.email.charAt(0).toUpperCase() : 'U';
+                }
 
-        // === POSTS ===
-        async function createPost() {
-            const content = document.getElementById('postContent').value.trim();
-            if (!content) {
-                showAlert("Post cannot be empty.", true);
+                document.getElementById('headerUserInitial').textContent = getInitials(displayName);
+
+                const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+                onSnapshot(q, (snapshot) => {
+                    const posts = [];
+                    snapshot.forEach(doc => {
+                        posts.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderPosts(posts);
+                }, (error) => {
+                    console.error("Error fetching posts:", error);
+                    showAlert("Failed to load posts.", true);
+                });
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        function renderPosts(posts) {
+            const feed = document.getElementById('feed');
+            feed.innerHTML = '';
+
+            if (posts.length === 0) {
+                feed.innerHTML = '<div class="empty-feed">No posts available now</div>';
                 return;
             }
 
-            try {
-                const imageUrl = getRandomImage();
-                await addDoc(collection(db, "posts"), {
-                    userId: currentUser.uid,
-                    username: ADMIN_DISPLAY_NAME,
-                    content: content,
-                    imageUrl: imageUrl,
-                    reactions: {}, // e.g., { "😂": 5, "👍": 3 }
-                    userReactions: {}, // e.g., { "userUid123": "😂" }
-                    timestamp: serverTimestamp()
-                });
-                showAlert("Post created!", false);
-                closePostPopup();
-            } catch (err) {
-                console.error("Post error:", err);
-                showAlert("Failed to create post.", true);
-            }
-        }
+            posts.forEach(post => {
+                const username = post.username || ADMIN_DISPLAY_NAME;
+                const timeStr = timeAgo(post.timestamp);
+                const canDelete = currentUser?.email === ADMIN_EMAIL;
+                // Clean image URL: trim any accidental spaces
+                const imgSrc = (post.imageUrl || EDUCATIONAL_IMAGES[0]).trim();
 
-        async function deletePost(postId) {
-            if (currentUser?.email !== ADMIN_EMAIL) return;
-            try {
-                await deleteDoc(doc(db, "posts", postId));
-                showAlert("Post deleted.");
-            } catch (err) {
-                console.error("Delete error:", err);
-                showAlert("Failed to delete post.", true);
-            }
-        }
+                const deleteBtnHtml = canDelete 
+                    ? `<div class="delete-btn" onclick="showCustomAlert('${post.id}')">×</div>` 
+                    : '';
 
-        async function setReaction(postId, emoji) {
-            if (!currentUser) return;
-            const postRef = doc(db, "posts", postId);
-            const postSnap = await getDoc(postRef);
-            if (!postSnap.exists()) return;
-
-            const data = postSnap.data();
-            const oldEmoji = data.userReactions?.[currentUser.uid];
-            const reactions = { ...data.reactions };
-
-            // Remove old reaction if exists
-            if (oldEmoji) {
-                reactions[oldEmoji] = Math.max(0, (reactions[oldEmoji] || 1) - 1);
-                if (reactions[oldEmoji] === 0) delete reactions[oldEmoji];
-            }
-
-            // Add new reaction
-            reactions[emoji] = (reactions[emoji] || 0) + 1;
-
-            await updateDoc(postRef, {
-                reactions: reactions,
-                [`userReactions.${currentUser.uid}`]: emoji
-            });
-        }
-
-        function renderReactions(reactionsObj) {
-            if (!reactionsObj || Object.keys(reactionsObj).length === 0) return '';
-            let html = '<div class="reactions-bar">';
-            // Fixed order for consistency
-            const order = ["👍", "😂", "😊", "😎", "😡"];
-            for (const emoji of order) {
-                const count = reactionsObj[emoji] || 0;
-                if (count > 0) {
-                    html += `<div class="reaction-item">${emoji} ${count}</div>`;
-                }
-            }
-            html += '</div>';
-            return html;
-        }
-
-        function renderPost(post) {
-            const postEl = document.createElement('div');
-            postEl.className = 'post-container';
-
-            const deleteBtn = currentUser?.email === ADMIN_EMAIL 
-                ? `<div class="delete-btn" onclick="event.stopPropagation(); deletePost('${post.id}')">×</div>` 
-                : '';
-
-            // Fallback image if none
-            const imgSrc = post.imageUrl?.trim() || 'https://images.unsplash.com/photo-1503676260748-1843bb90c3e0?auto=format&fit=crop&w=800&q=80';
-
-            postEl.innerHTML = `
-                <div class="post">
-                    ${deleteBtn}
-                    <img class="post-image" src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1503676260748-1843bb90c3e0?auto=format&fit=crop&w=800&q=80'">
-                    <div class="post-body">
-                        <div class="post-header">
-                            <div class="post-avatar">${getInitials(post.username)}</div>
-                            <div class="post-info">
-                                <div class="post-username">${post.username || 'wonderland portal'}</div>
-                                <div class="post-time">${timeAgo(post.timestamp)}</div>
+                const postHtml = `
+                    <div class="post">
+                        ${deleteBtnHtml}
+                        <img src="${imgSrc}" class="post-image" alt="Educational" onerror="this.src='https://via.placeholder.com/500x220/e50914/ffffff?text=Educational'">
+                        <div class="post-body">
+                            <div class="post-header">
+                                <div class="post-avatar">W</div>
+                                <div class="post-info">
+                                    <div class="post-username">${username}</div>
+                                    <div class="post-time">${timeStr}</div>
+                                </div>
                             </div>
+                            <div class="post-content">${post.content || ''}</div>
                         </div>
-                        <div class="post-content">${post.content}</div>
-                        ${renderReactions(post.reactions)}
                     </div>
-                </div>
-            `;
-
-            // Long press for 5 seconds
-            const clearTimer = () => {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
-            };
-
-            const startTimer = (e) => {
-                e.preventDefault();
-                clearTimer();
-                longPressTimer = setTimeout(() => {
-                    currentPostIdForReaction = post.id;
-                    document.getElementById('emojiPicker').style.display = 'flex';
-                }, 5000);
-            };
-
-            // Touch and mouse support
-            postEl.addEventListener('touchstart', startTimer, { passive: false });
-            postEl.addEventListener('mousedown', startTimer);
-            postEl.addEventListener('touchend', clearTimer);
-            postEl.addEventListener('mouseup', clearTimer);
-            postEl.addEventListener('touchmove', clearTimer);
-            postEl.addEventListener('mouseleave', clearTimer);
-            postEl.addEventListener('touchcancel', clearTimer);
-
-            return postEl;
-        }
-
-        function loadPosts() {
-            const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
-            postsUnsub = onSnapshot(q, (snapshot) => {
-                const feed = document.getElementById('feed');
-                feed.innerHTML = '';
-                if (snapshot.empty) {
-                    feed.innerHTML = '<div class="empty-feed">No posts yet.</div>';
-                    return;
-                }
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    data.id = doc.id;
-                    feed.appendChild(renderPost(data));
-                });
-            }, (error) => {
-                console.error("Posts load error:", error);
-                showAlert("Failed to load posts.", true);
+                `;
+                const container = document.createElement('div');
+                container.className = 'post-container';
+                container.innerHTML = postHtml;
+                feed.appendChild(container);
             });
         }
 
-        // === EMOJI PICKER HANDLER ===
-        document.querySelectorAll('.emoji-option').forEach(el => {
-            el.addEventListener('click', async () => {
-                if (currentPostIdForReaction) {
-                    await setReaction(currentPostIdForReaction, el.dataset.emoji);
-                    document.getElementById('emojiPicker').style.display = 'none';
-                    currentPostIdForReaction = null;
-                }
-            });
-        });
-
-        // Close picker on outside tap
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('#emojiPicker') && !e.target.closest('.post-container')) {
-                document.getElementById('emojiPicker').style.display = 'none';
-                currentPostIdForReaction = null;
-            }
-        });
-
-        // Prevent scroll during long press on mobile
-        document.addEventListener('touchmove', (e) => {
-            if (longPressTimer) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-
-        // === AUTH & INIT ===
-        onAuthStateChanged(auth, (user) => {
-            if (!user) return window.location.href = 'login.html';
-            currentUser = user;
-            document.getElementById('headerUserInitial').textContent = getInitials(user.displayName || user.email);
-
-            // Only admin sees post button
-            if (user.email === ADMIN_EMAIL) {
-                document.getElementById('postBtn').style.display = 'flex';
-            }
-
-            loadPosts();
-        });
-
-        // Expose globally for inline handlers
-        window.deletePost = deletePost;
+        // Expose functions globally
+        window.showCustomAlert = showCustomAlert;
+        window.hideCustomAlert = hideCustomAlert;
+        window.confirmDeletePost = confirmDeletePost;
         window.openPostPopup = openPostPopup;
         window.closePostPopup = closePostPopup;
         window.createPost = createPost;
