@@ -3,268 +3,65 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Video Call – wöndèlånd</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <title>Video Call - wöndèlånd</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-    body { background:#000; color:white; height:100vh; display:flex; flex-direction:column; }
-    header {
-      padding:16px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      background:rgba(0,0,0,0.7);
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    .peer-name { font-weight:bold; font-size:18px; }
-    #local-player, #remote-player {
-      width:100%;
-      height:100%;
-      background:#111;
-      position:absolute;
-      top:0;
-      left:0;
+    body {
+      background: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
     }
-    #remote-player { z-index:1; }
-    #local-player {
-      width:120px;
-      height:160px;
-      border-radius:12px;
-      z-index:2;
-      bottom:20px;
-      right:20px;
-      position:absolute;
+    .container {
+      text-align: center;
+      max-width: 500px;
+      background: white;
+      padding: 40px 30px;
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
     }
-    .controls {
-      position:absolute;
-      bottom:20px;
-      left:50%;
-      transform:translateX(-50%);
-      display:flex;
-      gap:24px;
-      z-index:3;
+    .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      color: #e74c3c;
     }
-    .call-btn {
-      width:60px;
-      height:60px;
-      border-radius:50%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:24px;
-      cursor:pointer;
+    h1 {
+      font-size: 24px;
+      color: #333;
+      margin-bottom: 16px;
+      line-height: 1.4;
     }
-    .end-call { background:#d32f2f; }
-    .mute-audio { background:#333; }
-    .mute-video { background:#333; }
-    .timer {
-      position:absolute;
-      top:20px;
-      left:50%;
-      transform:translateX(-50%);
-      background:rgba(0,0,0,0.6);
-      padding:6px 12px;
-      border-radius:20px;
-      font-family:monospace;
-      font-weight:bold;
+    p {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .footer {
+      font-size: 14px;
+      color: #999;
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="peer-name" id="peerName">Connecting...</div>
-    <div class="timer" id="callTimer">00:00</div>
-  </header>
-
-  <div id="remote-player">Waiting for peer...</div>
-  <div id="local-player"></div>
-
-  <div class="controls">
-    <div class="call-btn mute-audio" id="micBtn" title="Mute">
-      <i class="fas fa-microphone"></i>
-    </div>
-    <div class="call-btn end-call" id="endCallBtn" title="End Call">
-      <i class="fas fa-phone"></i>
-    </div>
-    <div class="call-btn mute-video" id="videoBtn" title="Disable Camera">
-      <i class="fas fa-video"></i>
-    </div>
+  <div class="container">
+    <div class="icon">🤕</div>
+    <h1>Hey <span id="username">username</span>, ops 🤕🤕</h1>
+    <p>Sorry, we have not yet implemented this feature.<br>It will be available as soon as we can.</p>
+    <p class="footer">Emmy boy programmers are seriously working on it.</p>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
-      authDomain: "emmy-programmers.firebaseapp.com",
-      projectId: "emmy-programmers",
-      storageBucket: "emmy-programmers.firebasestorage.app",
-      messagingSenderId: "351752440867",
-      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    // Load Agora SDK
-    const script = document.createElement('script');
-    script.src = "https://download.agora.io/sdk/release/AgoraRTC_N.js";
-    document.head.appendChild(script);
-
-    const AGORA_APP_ID = "fcfbeea054a84e529a1d984becbb4774";
-    const CHANNEL_NAME = new URLSearchParams(window.location.search).get('peer');
-    const PEER_NAME = decodeURIComponent(new URLSearchParams(window.location.search).get('name') || 'User');
-    const IS_VIDEO = true;
-
-    let currentUser = null;
-    let client = null;
-    let localTracks = { audioTrack: null, videoTrack: null };
-    let remotePlayer = null;
-    let localPlayerDiv = null;
-    let callStartTime = null;
-    let timerInterval = null;
-
-    document.getElementById('peerName').textContent = PEER_NAME;
-
-    function formatTime(seconds) {
-      const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-      const secs = (seconds % 60).toString().padStart(2, '0');
-      return `${mins}:${secs}`;
-    }
-
-    function startTimer() {
-      callStartTime = Date.now();
-      timerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
-        document.getElementById('callTimer').textContent = formatTime(elapsed);
-      }, 1000);
-    }
-
-    function stopTimer() {
-      if (timerInterval) clearInterval(timerInterval);
-    }
-
-    async function logCall(type, durationSec) {
-      if (!currentUser || !CHANNEL_NAME) return;
-      const chatId = [currentUser.uid, CHANNEL_NAME].sort().join('_');
-      await addDoc(collection(db, 'chats', chatId, 'messages'), {
-        type: 'call_log',
-        callType: IS_VIDEO ? 'video' : 'audio',
-        status: type, // 'answered', 'missed'
-        duration: durationSec,
-        sender: currentUser.uid,
-        timestamp: serverTimestamp()
-      });
-    }
-
-    async function initCall() {
-      if (typeof AgoraRTC === 'undefined') {
-        setTimeout(initCall, 300);
-        return;
-      }
-
-      try {
-        client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        await client.join(AGORA_APP_ID, CHANNEL_NAME, null, null);
-
-        const tracks = await AgoraRTC.createMicrophoneAndCameraTracks();
-        localTracks.audioTrack = tracks[0];
-        localTracks.videoTrack = tracks[1];
-
-        // Local preview
-        localPlayerDiv = document.createElement('div');
-        localPlayerDiv.id = 'local-stream';
-        document.getElementById('local-player').appendChild(localPlayerDiv);
-        localTracks.videoTrack.play(localPlayerDiv);
-
-        await client.publish(Object.values(localTracks));
-        startTimer();
-
-        client.on("user-published", async (user, mediaType) => {
-          await client.subscribe(user, mediaType);
-          if (mediaType === "video") {
-            const remoteDiv = document.createElement('div');
-            remoteDiv.id = `remote-${user.uid}`;
-            document.getElementById('remote-player').innerHTML = '';
-            document.getElementById('remote-player').appendChild(remoteDiv);
-            user.videoTrack.play(remoteDiv);
-            remotePlayer = remoteDiv;
-          }
-        });
-
-        client.on("user-unpublished", (user, mediaType) => {
-          if (mediaType === "video" && remotePlayer) {
-            remotePlayer.remove();
-            remotePlayer = null;
-          }
-        });
-
-      } catch (e) {
-        console.error("Call error:", e);
-        alert("Failed to start call. Please retry.");
-        window.history.back();
-      }
-    }
-
-    function endCall() {
-      stopTimer();
-      const duration = callStartTime ? Math.floor((Date.now() - callStartTime) / 1000) : 0;
-      logCall('answered', duration);
-      cleanup();
-      window.history.back();
-    }
-
-    function cleanup() {
-      if (localTracks.videoTrack) {
-        localTracks.videoTrack.stop();
-        localTracks.videoTrack.close();
-      }
-      if (localTracks.audioTrack) {
-        localTracks.audioTrack.stop();
-        localTracks.audioTrack.close();
-      }
-      if (client) {
-        client.leave();
-        client = null;
-      }
-    }
-
-    // Buttons
-    document.getElementById('endCallBtn').onclick = endCall;
-    document.getElementById('micBtn').onclick = () => {
-      if (!localTracks.audioTrack) return;
-      const isMuted = localTracks.audioTrack.getVolume() === 0;
-      localTracks.audioTrack.setVolume(isMuted ? 100 : 0);
-      document.getElementById('micBtn').innerHTML = isMuted ? 
-        '<i class="fas fa-microphone"></i>' : 
-        '<i class="fas fa-microphone-slash"></i>';
-    };
-    document.getElementById('videoBtn').onclick = () => {
-      if (!localTracks.videoTrack) return;
-      const isEnabled = localTracks.videoTrack.isEnabled();
-      localTracks.videoTrack.setEnabled(!isEnabled);
-      document.getElementById('videoBtn').innerHTML = isEnabled ? 
-        '<i class="fas fa-video-slash"></i>' : 
-        '<i class="fas fa-video"></i>';
-    };
-
-    // Auth
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = 'login.html';
-        return;
-      }
-      currentUser = user;
-      initCall();
-    });
-
-    window.addEventListener('beforeunload', () => {
-      const duration = callStartTime ? Math.floor((Date.now() - callStartTime) / 1000) : 0;
-      logCall('answered', duration);
-      cleanup();
-    });
+  <script>
+    // Retrieve username from localStorage
+    const savedUsername = localStorage.getItem('username') || 'user';
+    document.getElementById('username').textContent = savedUsername;
   </script>
 </body>
 </html>
