@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Set Fingerprint</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      text-align: center;
+      background: #fefefe;
+      padding: 50px;
+    }
+    .finger {
+      font-size: 90px;
+      color: #e50914;
+      margin: 20px 0;
+    }
+    button {
+      padding: 12px 25px;
+      background: #e50914;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #b2060f;
+    }
+  </style>
+</head>
+<body>
+  <h2>Set Fingerprint Lock</h2>
+  <div class="finger">🖐️</div>
+  <p>Touch your fingerprint sensor to register</p>
+  <button onclick="registerFingerprint()">Register Fingerprint</button>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_DOMAIN.firebaseapp.com",
+      databaseURL: "https://YOUR_DATABASE.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_BUCKET.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    async function registerFingerprint() {
+      if (!window.PublicKeyCredential) {
+        return Swal.fire("Unsupported", "Your browser doesn't support WebAuthn", "error");
+      }
+
+      Swal.fire({
+        title: "Fingerprint Setup",
+        text: "Touch your fingerprint sensor now...",
+        icon: "info",
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        didOpen: async () => {
+          try {
+            const credential = await navigator.credentials.create({
+              publicKey: {
+                challenge: new Uint8Array(32),
+                rp: { name: "Wonderland Security" },
+                user: {
+                  id: new Uint8Array(16),
+                  name: "user@example.com",
+                  displayName: "User"
+                },
+                pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                timeout: 60000,
+                attestation: "direct"
+              }
+            });
+
+            Swal.fire({
+              icon: "success",
+              title: "Fingerprint Registered!",
+              text: "Saving to your account...",
+              showConfirmButton: false,
+              timer: 2000
+            });
+
+            auth.onAuthStateChanged(user => {
+              if (user) {
+                db.ref(`users/${user.uid}/security`).set({
+                  lockType: "fingerprint",
+                  credentialId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId)))
+                }).then(() => {
+                  Swal.fire({
+                    icon: "success",
+                    title: "Saved Successfully!",
+                    text: "Fingerprint lock has been enabled.",
+                    showConfirmButton: false,
+                    timer: 2000
+                  }).then(() => window.location.href = "settings.html");
+                }).catch(err => {
+                  Swal.fire("Error", err.message, "error");
+                });
+              } else {
+                Swal.fire("Error", "User not logged in", "error");
+              }
+            });
+          } catch (err) {
+            Swal.fire("Failed", err.message || "Fingerprint setup failed", "error");
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

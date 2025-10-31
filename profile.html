@@ -6,6 +6,7 @@
   <title>Profile – Wonderland</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   <style>
     * {
       margin: 0;
@@ -248,7 +249,7 @@
       document.getElementById('profileClass').textContent = userClass;
     }
 
-    // Setup button listeners AFTER user is known
+    // Button listeners AFTER user is known
     function setupButtons() {
       document.getElementById('liveBtn').onclick = () => {
         if (currentUser && currentUser.email === ADMIN_EMAIL) {
@@ -263,13 +264,9 @@
         }
       };
 
+      // ✅ Redirect Settings button properly
       document.getElementById('settingsBtn').onclick = () => {
-        Swal.fire({
-          title: 'Coming Soon',
-          text: 'This feature will be implemented later.',
-          icon: 'info',
-          confirmButtonColor: '#e50914'
-        });
+        window.location.href = 'settings.html';
       };
 
       document.getElementById('logoutBtn').onclick = () => {
@@ -295,11 +292,11 @@
       };
     }
 
-    // Wait for auth state to stabilize
+    // Wait for auth state
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         await loadProfile(user);
-        setupButtons(); // ✅ Buttons set up AFTER user is confirmed
+        setupButtons();
       } else {
         window.location.href = 'login.html';
       }

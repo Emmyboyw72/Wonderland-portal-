@@ -2,34 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- 🔒 Prevent zooming in Chrome & mobile browsers -->
+  <!-- Prevent zooming -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  
   <title>Wonderland Portal</title>
-  
+
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
   <style>
-    /* 🔒 Disable zoom via CSS */
     html {
       touch-action: manipulation;
     }
     body {
       -webkit-text-size-adjust: 100%;
-      -moz-text-size-adjust: 100%;
-      -ms-text-size-adjust: 100%;
-      text-size-adjust: 100%;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    body {
+      user-select: none;
       background: linear-gradient(135deg, #fff9f9, #ffebee);
       display: flex;
       justify-content: center;
@@ -38,22 +29,19 @@
       padding: 20px;
       color: #e50914;
       overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-
     .container {
       text-align: center;
       max-width: 500px;
       width: 100%;
     }
-
-    /* Elegant Logo */
     .logo {
       position: relative;
       width: 140px;
       height: 140px;
       margin: 0 auto 28px;
     }
-
     .outer-circle {
       position: absolute;
       width: 100%;
@@ -62,7 +50,6 @@
       border-radius: 50%;
       animation: pulse 2s infinite;
     }
-
     .inner-logo {
       position: absolute;
       top: 50%;
@@ -72,36 +59,29 @@
       font-weight: 800;
       background: linear-gradient(to right, #e50914, #ff6b6b);
       -webkit-background-clip: text;
-      background-clip: text;
       color: transparent;
       font-family: 'Georgia', serif;
       letter-spacing: -2px;
     }
-
     @keyframes pulse {
       0% { box-shadow: 0 0 0 0 rgba(229, 9, 20, 0.2); }
       70% { box-shadow: 0 0 0 12px rgba(229, 9, 20, 0); }
       100% { box-shadow: 0 0 0 0 rgba(229, 9, 20, 0); }
     }
-
     h1 {
       font-size: 32px;
       font-weight: 800;
       margin-bottom: 12px;
       background: linear-gradient(to right, #e50914, #c20817);
       -webkit-background-clip: text;
-      background-clip: text;
       color: transparent;
-      letter-spacing: -0.5px;
     }
-
     .subtitle {
       font-size: 18px;
       color: #555;
       margin-bottom: 32px;
       line-height: 1.5;
     }
-
     .loader {
       display: inline-block;
       width: 40px;
@@ -111,12 +91,10 @@
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
-
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-
     .status {
       margin-top: 20px;
       font-size: 16px;
@@ -126,14 +104,6 @@
       align-items: center;
       gap: 10px;
     }
-
-    /* Prevent text selection */
-    body {
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
-    }
   </style>
 </head>
 <body>
@@ -142,38 +112,73 @@
       <div class="outer-circle"></div>
       <div class="inner-logo">W</div>
     </div>
-    
+
     <h1>Wonderland Portal</h1>
     <p class="subtitle">Your gateway to live classes, friends, and learning</p>
-    
+
     <div class="status">
       <div class="loader"></div>
       <span>Verifying your session...</span>
     </div>
   </div>
 
-  <!-- Firebase Auth Redirect -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
+  <script>
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
       authDomain: "emmy-programmers.firebaseapp.com",
+      databaseURL: "https://emmy-programmers-default-rtdb.firebaseio.com",
       projectId: "emmy-programmers",
       storageBucket: "emmy-programmers.firebasestorage.app",
       messagingSenderId: "351752440867",
       appId: "1:351752440867:web:1f65d8c922d3d48e063596"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-    onAuthStateChanged(auth, (user) => {
+    // Check login and security setup
+    auth.onAuthStateChanged(user => {
       if (user) {
-        window.location.href = "dashboard.html";
+        const userRef = db.ref(`users/${user.uid}/security`);
+        userRef.once("value").then(snapshot => {
+          const data = snapshot.val();
+
+          if (data && (data.lockType === "password" || data.lockType === "fingerprint")) {
+            Swal.fire({
+              icon: "info",
+              title: "Security Check 🔒",
+              text: "Fingerprint or password lock is enabled.",
+              confirmButtonColor: "#e50914",
+              confirmButtonText: "Continue"
+            }).then(() => {
+              window.location.href = "security.html";
+            });
+          } else {
+            Swal.fire({
+              icon: "success",
+              title: "Welcome Back!",
+              text: "Redirecting to your dashboard...",
+              showConfirmButton: false,
+              timer: 1800
+            });
+            setTimeout(() => {
+              window.location.href = "dashboard.html";
+            }, 1800);
+          }
+        });
       } else {
-        window.location.href = "signup.html";
+        Swal.fire({
+          icon: "info",
+          title: "Welcome to Wonderland ✨",
+          text: "Let's get you started.",
+          showConfirmButton: false,
+          timer: 1800
+        });
+        setTimeout(() => {
+          window.location.href = "signup.html";
+        }, 1800);
       }
     });
   </script>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Security • Wonderland</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background: #f8f9fa;
+      text-align: center;
+      padding: 40px;
+    }
+    h1 {
+      color: #e50914;
+      margin-bottom: 10px;
+    }
+    #username {
+      font-weight: bold;
+      color: #444;
+    }
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      max-width: 350px;
+      margin: 20px auto;
+    }
+    button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: #e50914;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: .3s;
+    }
+    button:hover {
+      background: #b2060f;
+    }
+    .back {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: #e50914;
+    }
+  </style>
+</head>
+<body>
+  <button class="back" onclick="window.location.href='profile.html'">←</button>
+  <h1>Security Settings</h1>
+  <p>Welcome, <span id="username">Loading...</span></p>
+
+  <div class="card">
+    <h3>Lock Options</h3>
+    <p id="statusText">Checking lock status...</p>
+    <button onclick="window.location.href='setpassword.html'">Set Password</button>
+    <button onclick="window.location.href='fingerprint.html'">Set Fingerprint</button>
+  </div>
+
+  <script>
+    // ✅ Firebase Config (REAL CONFIG)
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596",
+      databaseURL: "https://emmy-programmers-default-rtdb.firebaseio.com/"
+    };
+
+    // ✅ Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    // ✅ Keep user logged in across reloads
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById("username").textContent = user.displayName || user.email.split("@")[0];
+
+        const ref = db.ref(`users/${user.uid}/security`);
+        ref.once("value").then(snapshot => {
+          const data = snapshot.val();
+          if (data && data.lockType) {
+            document.getElementById("statusText").textContent =
+              data.lockType === "password"
+                ? "🔐 Password Lock is set"
+                : data.lockType === "fingerprint"
+                ? "🖐️ Fingerprint Lock is set"
+                : "⚠️ No lock set";
+
+            Swal.fire({
+              icon: "success",
+              title: "Security Loaded",
+              text: `Lock Type: ${data.lockType}`,
+              timer: 2000,
+              showConfirmButton: false
+            });
+          } else {
+            document.getElementById("statusText").textContent = "⚠️ No lock set";
+            Swal.fire({
+              icon: "warning",
+              title: "No Security Set",
+              text: "Please set a password or fingerprint lock"
+            });
+          }
+        }).catch(error => {
+          Swal.fire("Error", error.message, "error");
+        });
+
+      } else {
+        // Redirect only if user not logged in
+        window.location.href = "login.html";
+      }
+    });
+  </script>
+</body>
+</html>
