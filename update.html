@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Status</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    html, body, * {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: #000;
+      color: white;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      background: #000;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .header-title {
+      font-weight: bold;
+      font-size: 18px;
+      color: #40a9ff;
+      text-align: center;
+    }
+
+    .my-status {
+      padding: 16px;
+      border-bottom: 1px solid #222;
+    }
+
+    .my-status-box {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 16px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .my-status-box:hover {
+      background: #252525;
+    }
+
+    .status-content {
+      color: #eee;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      margin-bottom: 8px;
+    }
+
+    .status-username {
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    .viewers-count {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #888;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .others-section {
+      padding: 16px;
+    }
+
+    .others-title {
+      color: #aaa;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .others-carousel {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .others-carousel::-webkit-scrollbar {
+      display: none;
+    }
+
+    .status-card {
+      min-width: 180px;
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+
+    .status-card:hover {
+      transform: scale(1.02);
+    }
+
+    .card-content {
+      color: #eee;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      font-size: 14px;
+      max-height: 60px;
+      overflow: hidden;
+    }
+
+    .card-username {
+      font-size: 13px;
+      color: #aaa;
+      margin-top: 8px;
+    }
+
+    /* Expanded view */
+    .expanded-view {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+
+    .expanded-content {
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .expanded-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .expanded-username {
+      font-weight: bold;
+      font-size: 18px;
+      margin-top: 8px;
+    }
+
+    .status-time {
+      color: #888;
+      font-size: 14px;
+    }
+
+    .expanded-text {
+      color: white;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      font-size: 16px;
+    }
+
+    .viewers-line {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: #40a9ff;
+      margin-top: 16px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: white;
+      font-size: 28px;
+      cursor: pointer;
+    }
+
+    /* Viewers list modal */
+    .viewers-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      z-index: 2001;
+      padding-top: 80px;
+      padding-inline: 20px;
+    }
+
+    .viewers-header {
+      color: #40a9ff;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    .viewer-item {
+      background: #2a2a2a;
+      padding: 10px 16px;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 400px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    /* Floating buttons */
+    .floating-btn {
+      position: fixed;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+
+    #cameraBtn {
+      bottom: 90px;
+      right: 24px;
+      background: #40a9ff;
+    }
+
+    #textBtn {
+      bottom: 160px;
+      right: 24px;
+      background: #2a9d8f;
+    }
+
+    .floating-btn i {
+      font-size: 24px;
+      color: white;
+    }
+
+    .badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: red;
+      color: white;
+      font-size: 10px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      z-index: 1001;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #666;
+      margin-top: 20px;
+      font-style: italic;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #000;
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0;
+      z-index: 1000;
+    }
+    .footer-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #888;
+      font-size: 12px;
+      text-decoration: none;
+    }
+    .footer-btn.active {
+      color: #40a9ff;
+      font-weight: bold;
+    }
+    .footer-btn i {
+      font-size: 20px;
+      margin-bottom: 9px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-title">Status</div>
+  </header>
+
+  <div class="content" id="content">
+    <div class="my-status">
+      <div class="my-status-box" id="myStatusBox">
+        <div class="status-content">Tap to add a status update</div>
+        <div class="status-username" id="myUsername">You</div>
+      </div>
+    </div>
+
+    <div class="others-section">
+      <div class="others-title">Recent updates</div>
+      <div class="others-carousel" id="othersCarousel">
+        <div class="empty-state">No recent updates</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Buttons -->
+  <div class="floating-btn" id="cameraBtn">
+    <i class="fas fa-camera"></i>
+    <div class="badge" id="unseenBadge" style="display:none;">0</div>
+  </div>
+  <div class="floating-btn" id="textBtn">
+    <i class="fas fa-pencil-alt"></i>
+  </div>
+
+  <footer>
+    <a href="friends.html" class="footer-btn">
+      <i class="fas fa-message"></i> chat
+    </a>
+    <a href="update.html" class="footer-btn active">
+      <i class="fas fa-wallet"></i> update@status
+    </a>
+    <a href="community.html" class="footer-btn">
+      <i class="fas fa-circle"></i> community
+    </a>
+    <a href="calls.html" class="footer-btn">
+      <i class="fas fa-phone"></i> calls
+    </a>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      getDoc, 
+      getDocs,
+      setDoc,
+      addDoc,
+      serverTimestamp,
+      onSnapshot,
+      query,
+      where,
+      orderBy
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
+      authDomain: "emmy-programmers.firebaseapp.com",
+      projectId: "emmy-programmers",
+      storageBucket: "emmy-programmers.firebasestorage.app",
+      messagingSenderId: "351752440867",
+      appId: "1:351752440867:web:1f65d8c922d3d48e063596"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let myDisplayName = 'You';
+    const ADMIN_EMAIL = "bluepay863@gmail.com";
+
+    function formatTime(timestamp) {
+      if (!timestamp) return 'Just now';
+      const date = timestamp.toDate();
+      const now = new Date();
+      const diffMs = now - date;
+      const diffSec = diffMs / 1000;
+      const diffMin = diffSec / 60;
+      const diffHr = diffMin / 60;
+      const diffDay = diffHr / 24;
+
+      if (diffSec < 60) return 'Just now';
+      if (diffMin < 60) return `${Math.floor(diffMin)}m ago`;
+      if (diffHr < 24) return `${Math.floor(diffHr)}h ago`;
+      return 'Yesterday';
+    }
+
+    async function ensureUserDoc(user) {
+      const userDoc = await getDoc(doc(db, 'users', user.email));
+      if (!userDoc.exists()) {
+        Swal.fire('Error', 'Profile missing.', 'error');
+        return null;
+      }
+      const data = userDoc.data();
+      return data.username || user.email.split('@')[0] || 'User';
+    }
+
+    async function recordView(statusId) {
+      if (!currentUser) return;
+      const viewRef = doc(db, 'status_views', `${statusId}_${currentUser.uid}`);
+      await setDoc(viewRef, {
+        viewerId: currentUser.uid,
+        viewerEmail: currentUser.email,
+        timestamp: serverTimestamp(),
+        statusId
+      }, { merge: true });
+    }
+
+    async function fetchViewerUsernames(viewerEmails) {
+      const usernames = [];
+      for (const email of viewerEmails) {
+        const userDoc = await getDoc(doc(db, 'users', email));
+        if (userDoc.exists()) {
+          usernames.push(userDoc.data().username || email.split('@')[0] || 'User');
+        }
+      }
+      return usernames;
+    }
+
+    function showViewersList(viewerEmails) {
+      const modal = document.createElement('div');
+      modal.className = 'viewers-modal';
+      modal.innerHTML = `
+        <div class="viewers-header">Viewed by</div>
+      `;
+      const list = document.createElement('div');
+      if (viewerEmails.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'viewer-item';
+        empty.textContent = 'No one yet';
+        list.appendChild(empty);
+      } else {
+        fetchViewerUsernames(viewerEmails).then(usernames => {
+          usernames.forEach(name => {
+            const item = document.createElement('div');
+            item.className = 'viewer-item';
+            item.textContent = name;
+            list.appendChild(item);
+          });
+        });
+      }
+      modal.appendChild(list);
+
+      const close = document.createElement('div');
+      close.className = 'close-btn';
+      close.innerHTML = '&times;';
+      close.style.top = '20px';
+      close.style.right = '20px';
+      close.onclick = () => document.body.removeChild(modal);
+      modal.appendChild(close);
+
+      document.body.appendChild(modal);
+    }
+
+    function showExpanded(status, displayName, isOwn = false, viewerEmails = []) {
+      const overlay = document.createElement('div');
+      overlay.className = 'expanded-view';
+      overlay.innerHTML = `
+        <div class="close-btn">&times;</div>
+        <div class="expanded-content">
+          <div class="expanded-header">
+            <div class="expanded-username">${displayName}</div>
+            <div class="status-time">${formatTime(status.timestamp)}</div>
+          </div>
+          <div class="expanded-text">${status.text || ''}</div>
+          ${isOwn && status.viewersCount > 0 ? 
+            `<div class="viewers-line">
+              <i class="fas fa-eye"></i>
+              Seen by ${status.viewersCount} ${status.viewersCount === 1 ? 'person' : 'people'}
+            </div>` : ''}
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      if (isOwn && status.viewersCount > 0) {
+        overlay.querySelector('.viewers-line').addEventListener('click', (e) => {
+          e.stopPropagation();
+          document.body.removeChild(overlay);
+          showViewersList(viewerEmails);
+        });
+      }
+
+      overlay.querySelector('.close-btn').addEventListener('click', () => {
+        document.body.removeChild(overlay);
+      });
+
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          document.body.removeChild(overlay);
+        }
+      });
+    }
+
+    function renderMyStatus(status, viewersCount, viewerEmails) {
+      const box = document.getElementById('myStatusBox');
+      if (status.text) {
+        box.innerHTML = `
+          <div class="status-content">${status.text}</div>
+          <div class="status-username">${myDisplayName}</div>
+          <div class="viewers-count">
+            <i class="fas fa-eye"></i> Seen by ${viewersCount} ${viewersCount === 1 ? 'person' : 'people'}
+          </div>
+        `;
+        box.onclick = () => {
+          showExpanded(status, myDisplayName, true, viewerEmails);
+        };
+      } else {
+        box.innerHTML = `
+          <div class="status-content">Tap to add a status update</div>
+          <div class="status-username">${myDisplayName}</div>
+        `;
+        box.onclick = () => {
+          postTextStatus();
+        };
+      }
+    }
+
+    function renderOthersStatuses(statuses) {
+      const carousel = document.getElementById('othersCarousel');
+      if (statuses.length === 0) {
+        carousel.innerHTML = '<div class="empty-state">No recent updates</div>';
+        return;
+      }
+
+      carousel.innerHTML = '';
+      statuses.forEach(st => {
+        const card = document.createElement('div');
+        card.className = 'status-card';
+        card.innerHTML = `
+          <div class="card-content">${st.text || ''}</div>
+          <div class="card-username">${st.displayName}</div>
+        `;
+        card.onclick = async () => {
+          await recordView(st.id);
+          showExpanded(st, st.displayName);
+        };
+        carousel.appendChild(card);
+      });
+    }
+
+    async function loadStatuses() {
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      
+      // Get user's contact list (from chats)
+      const chatsRef = collection(db, 'chats');
+      const chatsSnapshot = await getDocs(query(chatsRef, where('participants', 'array-contains', currentUser.uid)));
+      const contactEmails = new Set();
+      const userDoc = await getDoc(doc(db, 'users', currentUser.email));
+      const userData = userDoc.data();
+      const myEmail = currentUser.email;
+
+      for (const chat of chatsSnapshot.docs) {
+        const participants = chat.data().participants;
+        for (const uid of participants) {
+          if (uid !== currentUser.uid) {
+            // Find user email by uid
+            const usersRef = collection(db, 'users');
+            const usersSnap = await getDocs(usersRef);
+            usersSnap.forEach(u => {
+              if (u.data().uid === uid) {
+                contactEmails.add(u.data().email);
+              }
+            });
+          }
+        }
+      }
+
+      // My email always allowed
+      contactEmails.add(myEmail);
+
+      const statusesQuery = query(
+        collection(db, 'statuses'),
+        where('timestamp', '>=', twentyFourHoursAgo),
+        orderBy('timestamp', 'desc')
+      );
+
+      const unsubscribe = onSnapshot(statusesQuery, async (snapshot) => {
+        const statuses = [];
+        const userCache = new Map();
+
+        // Cache all user display names
+        const allUsersSnapshot = await getDocs(collection(db, 'users'));
+        allUsersSnapshot.forEach(doc => {
+          if (doc.exists()) {
+            const data = doc.data();
+            userCache.set(data.email, data.username || data.email.split('@')[0] || 'User');
+          }
+        });
+
+        let myStatus = null;
+        const others = [];
+        const myStatusViewers = [];
+
+        for (const docSnap of snapshot.docs) {
+          const statusData = docSnap.data();
+          const ownerEmail = statusData.ownerEmail;
+
+          // Enforce: only contacts (or self) can see
+          if (!contactEmails.has(ownerEmail)) {
+            continue;
+          }
+
+          const displayName = userCache.get(ownerEmail) || 'User';
+
+          // Count viewers and collect emails
+          const viewsQuery = query(
+            collection(db, 'status_views'),
+            where('statusId', '==', docSnap.id)
+          );
+          const viewsSnapshot = await getDocs(viewsQuery);
+          const viewersCount = viewsSnapshot.size;
+          const viewerEmails = [];
+          viewsSnapshot.forEach(v => {
+            viewerEmails.push(v.data().viewerEmail);
+          });
+
+          const fullStatus = {
+            id: docSnap.id,
+            ...statusData,
+            displayName,
+            viewersCount,
+            viewerEmails
+          };
+
+          if (statusData.ownerId === currentUser.uid) {
+            myStatus = fullStatus;
+            myStatusViewers.push(...viewerEmails);
+          } else {
+            others.push(fullStatus);
+          }
+        }
+
+        renderMyStatus(myStatus || { text: null }, myStatus?.viewersCount || 0, myStatusViewers);
+        renderOthersStatuses(others);
+
+        // Update unseen badge (only others you haven't viewed)
+        const unseenCount = others.filter(st => {
+          return !st.viewerEmails.includes(currentUser.email);
+        }).length;
+
+        const badge = document.getElementById('unseenBadge');
+        if (unseenCount > 0) {
+          badge.textContent = unseenCount > 9 ? '9+' : unseenCount;
+          badge.style.display = 'flex';
+        } else {
+          badge.style.display = 'none';
+        }
+      });
+
+      window.addEventListener('beforeunload', () => unsubscribe());
+    }
+
+    async function postTextStatus() {
+      // Optional: restrict only admin
+      // if (currentUser.email !== ADMIN_EMAIL) {
+      //   Swal.fire('Restricted', 'Only admin can post status.', 'warning');
+      //   return;
+      // }
+
+      const { value: text } = await Swal.fire({
+        title: 'Write a status',
+        input: 'textarea',
+        inputPlaceholder: 'What’s on your mind?',
+        showCancelButton: true,
+        confirmButtonColor: '#40a9ff',
+        inputAttributes: {
+          maxlength: '500'
+        }
+      });
+
+      if (text?.trim()) {
+        await addDoc(collection(db, 'statuses'), {
+          ownerId: currentUser.uid,
+          ownerEmail: currentUser.email,
+          text: text.trim(),
+          timestamp: serverTimestamp(),
+          type: 'text'
+        });
+      }
+    }
+
+    function showNotAvailable() {
+      Swal.fire({
+        title: 'Coming Soon',
+        text: 'Photo & video status will be available soon.',
+        icon: 'info',
+        confirmButtonColor: '#40a9ff'
+      });
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return window.location.href = 'login.html';
+      currentUser = user;
+
+      const displayName = await ensureUserDoc(user);
+      if (!displayName) return;
+      myDisplayName = displayName;
+
+      document.getElementById('myUsername').textContent = myDisplayName;
+
+      loadStatuses();
+
+      document.getElementById('textBtn').addEventListener('click', postTextStatus);
+      document.getElementById('cameraBtn').addEventListener('click', showNotAvailable);
+    });
+  </script>
+</body>
+</html>

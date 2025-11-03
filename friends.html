@@ -3,11 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>wöndèlånd chat</title>
+  <title>wöndèrlånd chat</title>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00aaff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="/icon-192.png">
   <style>
-    /* 🔒 Prevent ALL text selection */
     html, body, * {
       -webkit-user-select: none;
       -moz-user-select: none;
@@ -15,89 +20,91 @@
       user-select: none;
       -webkit-touch-callout: none;
       touch-action: manipulation;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f0f2f5;
+      background: black;
       color: #333;
       height: 100vh;
       display: flex;
       flex-direction: column;
-      margin: 0;
-      padding: 0;
-      position: relative;
+      overflow: hidden;
     }
 
     header {
-      background: white;
+      background: black;
       padding: 12px 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      position: relative;
       z-index: 100;
-    }
-
-    .back-btn {
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #e50914;
-      font-size: 20px;
-      cursor: pointer;
-      flex-shrink: 0;
     }
 
     .header-title {
       font-weight: bold;
       font-size: 18px;
-      color: #333;
+      color: blue;
       flex: 1;
       text-align: center;
     }
 
-    .add-friend-btn {
+    .header-btn {
       width: 36px;
       height: 36px;
-      border-radius: 50%;
-      background: #e50914;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
+      color: blue;
+      font-size: 20px;
       cursor: pointer;
       flex-shrink: 0;
-      margin-left: 12px;
+    }
+
+    #searchBar {
+      width: 100%;
+      padding: 6px 12px;
+      margin: 8px auto;
+      border: none;
+      border-radius: 18px;
+      background: #222;
+      color: white;
+      font-size: 13px;
+      outline: none;
+      max-width: 320px;
+    }
+    #searchBar::placeholder {
+      color: #888;
     }
 
     .friends-list {
       flex: 1;
       overflow-y: auto;
-      padding: 8px 0;
+      padding: 0 8px 70px 8px;
     }
 
     .friend-item {
       display: flex;
       align-items: flex-start;
-      padding: 12px 16px;
-      background: white;
-      border-bottom: 1px solid #f0f0f0;
+      padding: 12px;
+      background: black;
+      border-radius: 10px;
+      margin-bottom: 8px;
       cursor: pointer;
       transition: background 0.2s;
       position: relative;
     }
 
-    .friend-item:hover {
-      background: #f8f9fa;
-    }
-
     .avatar {
-      width: 48px;
-      height: 48px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
-      background: #e50914;
+      background: blue;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -105,7 +112,7 @@
       font-weight: bold;
       margin-right: 12px;
       flex-shrink: 0;
-      font-size: 18px;
+      font-size: 16px;
     }
 
     .friend-info {
@@ -115,18 +122,19 @@
 
     .friend-name {
       font-weight: 600;
-      font-size: 16px;
-      margin-bottom: 4px;
+      font-size: 15px;
+      margin-bottom: 3px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: white;
     }
 
     .last-message-row {
       display: flex;
       align-items: center;
-      font-size: 13px;
-      color: #777;
+      font-size: 12px;
+      color: white;
     }
 
     .last-message {
@@ -137,73 +145,200 @@
     }
 
     .seen-indicator {
-      color: #999;
+      color: white;
       font-weight: bold;
-      margin-left: 6px;
-      min-width: 16px;
-      text-align: right;
+      margin-left: 4px;
     }
 
-    .seen-indicator.red {
-      color: #e50914;
+    .seen-indicator.blue {
+      color: blue;
     }
 
     .timestamp {
-      font-size: 12px;
+      font-size: 11px;
       color: #999;
       margin-left: 8px;
       flex-shrink: 0;
+      white-space: nowrap;
     }
 
-    /* Floating AI Button */
+    /* New message badge */
+    .new-message-badge {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      background: red;
+      color: white;
+      font-size: 10px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      font-weight: bold;
+    }
+
+    #headerMenu {
+      position: absolute;
+      top: 48px;
+      right: 16px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      z-index: 2000;
+      display: none;
+      min-width: 140px;
+    }
+
+    .menu-item {
+      padding: 10px 16px;
+      font-size: 14px;
+      color: #333;
+      cursor: pointer;
+    }
+
+    .menu-item:hover {
+      background: #f0f0f0;
+    }
+
+    #addFriendBtn,
     #aiFloatingBtn {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
-      width: 56px;
-      height: 56px;
+      bottom: 90px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
-      background: conic-gradient(from 0deg, #ff0000, #ff9900, #ffff00, #00cc66, #0066ff, #cc00ff, #ff0000);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       z-index: 1000;
       box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+
+    #addFriendBtn {
+      background: blue;
+    }
+
+    #aiFloatingBtn {
+      bottom: 160px;
+      background: conic-gradient(from 0deg, blue, lightgreen, purple, #00cc66, blue, green, purple);
       animation: rotateAI 8s linear infinite;
     }
 
+    #addFriendBtn i,
     #aiFloatingBtn i {
       font-size: 24px;
       color: white;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+
+    #aiFloatingBtn i {
+      color: black;
     }
 
     @keyframes rotateAI {
-      from { transform: rotate(0deg); }
-      to   { transform: rotate(360deg); }
+      to { transform: rotate(3600deg); }
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: black;
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0;
+      z-index: 1000;
+    }
+    .footer-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #888;
+      font-size: 11px;
+      text-decoration: none;
+    }
+    .footer-btn.active {
+      color: lightblue;
+      font-weight: bold;
+    }
+    .footer-btn i {
+      font-size: 18px;
+      margin-bottom: 6px;
     }
   </style>
 </head>
 <body>
 
   <header>
-    <div class="back-btn" id="backBtn">
-      <i class="fas fa-arrow-left"></i>
+    <div class="header-title">wöndèrlånd chat</div>
+    <div class="header-btn" id="menuBtn">
+      <i class="fas fa-ellipsis-v"></i>
     </div>
-    <div class="header-title">wöndèlånd chat</div>
-    <div class="add-friend-btn" id="addFriendBtn">
-      <i class="fas fa-plus"></i>
+
+    <div id="headerMenu">
+      <div class="menu-item" data-action="settings">Settings</div>
+      <div class="menu-item" data-action="starred">Starred</div>
+      <div class="menu-item" data-action="read-all">Mark all read</div>
     </div>
   </header>
 
+  <input type="text" id="searchBar" placeholder="Search contacts..." />
+
   <div class="friends-list" id="friendsList">
-    <!-- Chats will appear here -->
+    <!-- Will be populated -->
+  </div>
+
+  <div id="addFriendBtn">
+    <i class="fas fa-plus"></i>
   </div>
 
   <div id="aiFloatingBtn">
-    <i class="fas fa-robot"></i>
+    <i class="fas fa-circle"></i>
   </div>
+
+  <footer>
+    <a href="friends.html" class="footer-btn active">
+      <i class="fas fa-message"></i> chat
+    </a>
+    <a href="update.html" class="footer-btn">
+      <i class="fas fa-wallet"></i> update@status
+    </a>
+    <a href="community.html" class="footer-btn">
+      <i class="fas fa-circle"></i> community
+    </a>
+    <a href="calls.html" class="footer-btn">
+      <i class="fas fa-phone"></i> calls
+    </a>
+  </footer>
+
+  <!-- Service Worker & Notification Setup -->
+  <script>
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW registered'))
+          .catch(err => console.warn('SW failed:', err));
+      });
+    }
+
+    // Request notification permission on load
+    async function requestNotificationPermission() {
+      if (!("Notification" in window)) return;
+      if (Notification.permission === "granted") return true;
+      if (Notification.permission !== "denied") {
+        const permission = await Notification.requestPermission();
+        return permission === "granted";
+      }
+      return false;
+    }
+  </script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -239,22 +374,72 @@
     const ADMIN_EMAIL = "bluepay863@gmail.com";
     const ADMIN_DISPLAY_NAME = "wonderland portal";
 
+    const friendsList = document.getElementById('friendsList');
     let currentUser = null;
-    let loaderShown = false;
-    let dataLoaded = false;
-    const activeMessageListeners = new Map();
+    const activeListeners = new Map();
+    let userCache = new Map(); // uid → name
+    let emailCache = new Map(); // uid → email
+    let unreadCounts = new Map(); // chatId → count
+
+    // Request notification permission immediately
+    requestNotificationPermission();
+
+    // Gmail contacts access (only works on secure context)
+    async function suggestGmailContacts() {
+      if (!navigator.contacts || !window.isSecureContext) return [];
+      try {
+        const contacts = await navigator.contacts.select(['email'], { multiple: true });
+        return contacts.map(c => c.email?.[0]).filter(e => e);
+      } catch (err) {
+        console.log("Contacts access denied or not supported");
+        return [];
+      }
+    }
 
     function getInitials(name) {
       return (name?.charAt(0) || '?').toUpperCase();
     }
 
+    function formatTime(timestamp) {
+      if (!timestamp) return '';
+      const date = timestamp.toDate();
+      const now = new Date();
+      const diffMs = now - date;
+      const diffSec = Math.floor(diffMs / 1000);
+      const diffMin = Math.floor(diffSec / 60);
+      const diffHr = Math.floor(diffMin / 60);
+      const diffDay = Math.floor(diffHr / 24);
+
+      if (diffSec < 60) return 'just now';
+      if (diffMin < 60) return `${diffMin}m ago`;
+      if (diffHr < 24) return `${diffHr}h ago`;
+      if (diffDay === 1) return 'yesterday';
+      return `${diffDay}d ago`;
+    }
+
+    // Show system notification
+    function showNotification(senderName, messageText, peerEmail) {
+      if (Notification.permission !== "granted") return;
+
+      const notification = new Notification(`New message from ${senderName}`, {
+        body: messageText || 'You have a new message',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: `chat-${peerEmail}`
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        window.location.href = `messenger.html?peer=${encodeURIComponent(peerEmail)}&name=${encodeURIComponent(senderName)}`;
+      };
+    }
+
     async function ensureMandatoryChats(user) {
       const uid = user.uid;
-      const selfChatId = `${uid}_${uid}`;
-      await setDoc(doc(db, 'chats', selfChatId), {
+      const selfId = `${uid}_${uid}`;
+      await setDoc(doc(db, 'chats', selfId), {
         participants: [uid, uid],
         self: true,
-        type: 'self',
         createdAt: serverTimestamp()
       }, { merge: true });
 
@@ -263,8 +448,8 @@
         if (adminDoc.exists()) {
           const adminUid = adminDoc.data().uid;
           const ids = [uid, adminUid].sort();
-          const adminChatId = ids.join('_');
-          await setDoc(doc(db, 'chats', adminChatId), {
+          const chatId = ids.join('_');
+          await setDoc(doc(db, 'chats', chatId), {
             participants: ids,
             type: 'admin',
             createdAt: serverTimestamp()
@@ -273,38 +458,19 @@
       }
     }
 
-    async function addFriendByEmail(currentUser, friendEmail) {
-      if (!friendEmail || friendEmail === currentUser.email) {
-        Swal.fire('Invalid', 'Cannot add yourself.', 'warning');
-        return;
-      }
-      const friendDoc = await getDoc(doc(db, 'users', friendEmail));
-      if (!friendDoc.exists()) {
-        Swal.fire('Not Found', 'User not found.', 'error');
-        return;
-      }
-      const friendUid = friendDoc.data().uid;
-      const ids = [currentUser.uid, friendUid].sort();
-      const chatId = ids.join('_');
-      await setDoc(doc(db, 'chats', chatId), {
-        participants: ids,
-        createdAt: serverTimestamp()
-      }, { merge: true });
-      Swal.fire('Success', 'Friend added!', 'success');
-    }
-
     function renderFriendItem(chat) {
       const item = document.createElement('div');
       item.className = 'friend-item';
       item.dataset.chatId = chat.id;
-      item.dataset.peerEmail = chat.email;
+      item.dataset.name = chat.name;
+      item.dataset.email = chat.email;
 
-      const timeStr = chat.lastTimestamp 
-        ? chat.lastTimestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : '';
-      
-      const seenClass = chat.isSentByMe && chat.seen ? 'red' : '';
+      const timeStr = chat.lastTimestamp ? formatTime(chat.lastTimestamp) : '';
+      const seenClass = chat.isSentByMe && chat.seen ? 'blue' : '';
       const seenIcon = chat.isSentByMe ? `<span class="seen-indicator ${seenClass}">✓✓</span>` : '';
+      const badge = unreadCounts.get(chat.id) > 0 
+        ? `<div class="new-message-badge">${Math.min(unreadCounts.get(chat.id), 99)}</div>` 
+        : '';
 
       item.innerHTML = `
         <div class="avatar">${getInitials(chat.name)}</div>
@@ -315,207 +481,228 @@
             ${seenIcon}
           </div>
         </div>
-        ${timeStr ? `<div class="timestamp">${timeStr}</div>` : ''}
+        <div class="timestamp">${timeStr}</div>
+        ${badge}
       `;
 
-      // Click to open chat
       item.addEventListener('click', () => {
+        // Clear badge on open
+        unreadCounts.set(chat.id, 0);
         window.location.href = `messenger.html?peer=${encodeURIComponent(chat.email)}&name=${encodeURIComponent(chat.name)}`;
       });
 
-      // Long press to delete chat
+      // Long press to delete
       let pressTimer;
-      const startPress = () => {
+      const start = () => {
         pressTimer = setTimeout(async () => {
           const result = await Swal.fire({
             title: 'Delete Chat?',
-            text: `This will permanently delete all messages with ${chat.name}.`,
+            text: `Delete all messages with ${chat.name}?`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#e50914',
-            cancelButtonColor: '#6c757d',
             confirmButtonText: 'Delete'
           });
           if (result.isConfirmed) {
             try {
-              // Delete all messages in the chat
-              const messagesRef = collection(db, 'chats', chat.id, 'messages');
-              const messageSnapshot = await getDocs(messagesRef);
-              const batch = [];
-              messageSnapshot.forEach(doc => batch.push(deleteDoc(doc.ref)));
-              await Promise.all(batch);
-
-              // Delete the chat doc itself
+              const msgRef = collection(db, 'chats', chat.id, 'messages');
+              const msgs = await getDocs(msgRef);
+              const deletes = msgs.docs.map(d => deleteDoc(d.ref));
+              await Promise.all(deletes);
               await deleteDoc(doc(db, 'chats', chat.id));
-
-              // Remove from DOM
               item.remove();
-            } catch (err) {
-              console.error("Delete error:", err);
-              Swal.fire('Error', 'Failed to delete chat.', 'error');
+              unreadCounts.delete(chat.id);
+            } catch (e) {
+              console.error("Delete error:", e);
+              Swal.fire('Error', 'Failed to delete.', 'error');
             }
           }
         }, 600);
       };
-
-      const cancelPress = () => clearTimeout(pressTimer);
-
-      item.addEventListener('mousedown', startPress);
-      item.addEventListener('touchstart', startPress);
+      const cancel = () => clearTimeout(pressTimer);
+      item.addEventListener('mousedown', start);
+      item.addEventListener('touchstart', start);
       ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev => {
-        item.addEventListener(ev, cancelPress);
+        item.addEventListener(ev, cancel);
       });
 
       return item;
     }
 
-    function cleanupListeners() {
-      activeMessageListeners.forEach(unsub => unsub());
-      activeMessageListeners.clear();
-    }
-
     function listenToMessages(chatId, uid, peerEmail) {
-      if (activeMessageListeners.has(chatId)) return;
-
-      const msgRef = collection(db, 'chats', chatId, 'messages');
-      const q = query(msgRef, orderBy('timestamp', 'desc'));
-
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        let lastMessage = '';
-        let lastTimestamp = null;
-        let isSentByMe = false;
-        let seen = false;
-
-        if (!snapshot.empty) {
-          const last = snapshot.docs[0].data();
+      if (activeListeners.has(chatId)) return;
+      const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'desc'));
+      const unsub = onSnapshot(q, (snapshot) => {
+        let lastMessage = '', lastTimestamp = null, isSentByMe = false, seen = false, unread = 0;
+        const messages = snapshot.docs.map(d => d.data());
+        if (messages.length > 0) {
+          const last = messages[0];
           lastMessage = last.text || '';
           lastTimestamp = last.timestamp;
           isSentByMe = last.senderUid === uid;
           seen = last.seen || false;
+
+          // Count unread
+          unread = messages.filter(m => m.senderUid !== uid && !m.seen).length;
+          unreadCounts.set(chatId, unread);
+
+          // Show notification for new messages
+          if (!isSentByMe && unread > 0) {
+            const senderName = userCache.get(last.senderUid) || 'User';
+            showNotification(senderName, lastMessage, peerEmail);
+          }
+        } else {
+          unreadCounts.set(chatId, 0);
         }
 
-        const item = document.querySelector(`.friend-item[data-chat-id="${chatId}"]`);
-        if (item) {
-          const lastMsgEl = item.querySelector('.last-message');
-          const timestampEl = item.querySelector('.timestamp');
-          const seenIndicator = item.querySelector('.seen-indicator');
+        // Update DOM
+        const el = document.querySelector(`.friend-item[data-chat-id="${chatId}"]`);
+        if (el) {
+          el.querySelector('.last-message').textContent = lastMessage || 'Tap to chat';
+          el.querySelector('.timestamp').textContent = formatTime(lastTimestamp);
+          const ind = el.querySelector('.seen-indicator');
+          if (ind) ind.className = `seen-indicator ${isSentByMe && seen ? 'blue' : ''}`;
 
-          if (lastMsgEl) lastMsgEl.textContent = lastMessage || 'Tap to chat';
-          if (timestampEl) {
-            timestampEl.textContent = lastTimestamp 
-              ? lastTimestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              : '';
-          }
-          if (seenIndicator) {
-            seenIndicator.className = `seen-indicator ${isSentByMe && seen ? 'red' : ''}`;
+          // Update badge
+          const badge = el.querySelector('.new-message-badge');
+          if (unread > 0) {
+            if (!badge) {
+              const badgeEl = document.createElement('div');
+              badgeEl.className = 'new-message-badge';
+              badgeEl.textContent = Math.min(unread, 99);
+              el.appendChild(badgeEl);
+            } else {
+              badge.textContent = Math.min(unread, 99);
+            }
+          } else if (badge) {
+            badge.remove();
           }
         }
       });
-
-      activeMessageListeners.set(chatId, unsubscribe);
+      activeListeners.set(chatId, unsub);
     }
 
-    async function loadFriendsList(user) {
-      const container = document.getElementById('friendsList');
+    function filter(term) {
+      const items = document.querySelectorAll('.friend-item');
+      const t = term.toLowerCase().trim();
+      items.forEach(el => {
+        el.style.display = el.dataset.name.toLowerCase().includes(t) ? 'flex' : 'none';
+      });
+    }
+
+    async function loadFriendsFast(user) {
       const uid = user.uid;
 
-      if (!loaderShown) {
-        loaderShown = true;
-        Swal.fire({
-          title: 'Loading chats...',
-          allowOutsideClick: false,
-          allowEscapeKey: false,
-          didOpen: () => Swal.showLoading(),
-          customClass: {
-            popup: 'swal2-border-red'
-          }
-        });
-      }
-
-      cleanupListeners();
-
-      const chatsQuery = query(collection(db, 'chats'));
-      const unsubscribe = onSnapshot(chatsQuery, async (snapshot) => {
-        const chatList = [];
-        const userDocs = new Map();
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        usersSnapshot.forEach(doc => {
-          userDocs.set(doc.data().uid, doc.data());
-        });
-
-        for (const docSnap of snapshot.docs) {
-          const chatData = docSnap.data();
-          if (!chatData.participants || !chatData.participants.includes(uid)) continue;
-
-          let name = 'Unknown', email = '', isSelf = false, isAdmin = false;
-
-          if (chatData.self) {
-            name = 'Saved Messages';
-            email = user.email;
-            isSelf = true;
-          } else {
-            const otherUid = chatData.participants.find(id => id !== uid);
-            if (!otherUid) continue;
-
-            const otherUser = userDocs.get(otherUid);
-            if (otherUser && otherUser.email === ADMIN_EMAIL) {
-              name = ADMIN_DISPLAY_NAME;
-              email = ADMIN_EMAIL;
-              isAdmin = true;
-            } else if (otherUser) {
-              name = otherUser.username || otherUser.email?.split('@')[0] || 'User';
-              email = otherUser.email || 'unknown';
-            } else {
-              name = 'User';
-              email = 'unknown';
-            }
-          }
-
-          chatList.push({ 
-            id: docSnap.id, 
-            name, 
-            email, 
-            isSelf, 
-            isAdmin 
-          });
+      // Build user & email cache
+      const usersSnap = await getDocs(collection(db, 'users'));
+      userCache = new Map();
+      emailCache = new Map();
+      usersSnap.forEach(doc => {
+        if (doc.exists()) {
+          const data = doc.data();
+          userCache.set(data.uid, data.username || doc.id.split('@')[0] || 'User');
+          emailCache.set(data.uid, doc.id);
         }
+      });
 
-        chatList.sort((a, b) => {
-          if (a.isSelf) return -1;
-          if (b.isSelf) return 1;
-          if (a.isAdmin) return -1;
-          if (b.isAdmin) return 1;
-          return (a.name || '').localeCompare(b.name || '');
-        });
+      // Gmail suggestions
+      const gmailContacts = await suggestGmailContacts();
 
-        container.innerHTML = '';
-        chatList.forEach(chat => {
-          const placeholderChat = {
-            ...chat,
-            lastMessage: '',
+      // Render mandatory chats
+      const selfChat = {
+        id: `${uid}_${uid}`,
+        name: 'Saved Messages',
+        email: user.email,
+        lastMessage: 'Your notes & files',
+        lastTimestamp: null,
+        isSentByMe: false,
+        seen: false
+      };
+
+      let chats = [selfChat];
+
+      if (user.email !== ADMIN_EMAIL) {
+        const adminDoc = await getDoc(doc(db, 'users', ADMIN_EMAIL));
+        if (adminDoc.exists()) {
+          const adminUid = adminDoc.data().uid;
+          const ids = [uid, adminUid].sort();
+          const chatId = ids.join('_');
+          const adminChat = {
+            id: chatId,
+            name: ADMIN_DISPLAY_NAME,
+            email: ADMIN_EMAIL,
+            lastMessage: 'Message the admin',
             lastTimestamp: null,
             isSentByMe: false,
             seen: false
           };
-          container.appendChild(renderFriendItem(placeholderChat));
-          listenToMessages(chat.id, uid, chat.email);
+          chats.push(adminChat);
+        }
+      }
+
+      // Add Gmail suggestions at top
+      for (const email of gmailContacts) {
+        if (email === user.email || email === ADMIN_EMAIL) continue;
+        const userDoc = await getDoc(doc(db, 'users', email));
+        if (userDoc.exists()) {
+          const name = userDoc.data().username || email.split('@')[0];
+          const otherUid = userDoc.data().uid;
+          const ids = [uid, otherUid].sort();
+          const chatId = ids.join('_');
+          const suggestion = {
+            id: chatId,
+            name: name,
+            email: email,
+            lastMessage: 'New contact',
+            lastTimestamp: null,
+            isSentByMe: false,
+            seen: false
+          };
+          // Insert after "Saved Messages"
+          chats.splice(1, 0, suggestion);
+        }
+      }
+
+      // Render all
+      friendsList.innerHTML = '';
+      chats.forEach(chat => {
+        const el = renderFriendItem(chat);
+        friendsList.appendChild(el);
+        listenToMessages(chat.id, uid, chat.email);
+      });
+
+      // Load all other chats in background
+      try {
+        const chatsSnap = await getDocs(collection(db, 'chats'));
+        const allChats = [];
+        chatsSnap.forEach(doc => {
+          const d = doc.data();
+          if (!d.participants?.includes(uid)) return;
+          let name = 'User', email = '';
+          if (d.self) return;
+          const otherUid = d.participants.find(id => id !== uid);
+          if (!otherUid) return;
+          if (userCache.has(otherUid)) {
+            name = userCache.get(otherUid);
+            email = emailCache.get(otherUid) || '';
+            if (name === ADMIN_DISPLAY_NAME && user.email !== ADMIN_EMAIL) return;
+          } else {
+            return;
+          }
+                    allChats.push({ id: doc.id, name, email });
         });
 
-        dataLoaded = true;
-        maybeCloseLoader();
-      }, (error) => {
-        Swal.close();
-        console.error("Chats load error:", error);
-        Swal.fire('Error', 'Failed to load chats.', 'error');
-      });
-    }
-
-    function maybeCloseLoader() {
-      setTimeout(() => {
-        if (loaderShown && dataLoaded) {
-          Swal.close();
-        }
-      }, 800);
+        const existingIds = new Set(chats.map(c => c.id));
+        allChats.forEach(chat => {
+          if (!existingIds.has(chat.id)) {
+            const el = renderFriendItem({ ...chat, lastMessage: '', lastTimestamp: null, isSentByMe: false, seen: false });
+            friendsList.appendChild(el);
+            listenToMessages(chat.id, uid, chat.email);
+          }
+        });
+      } catch (e) {
+        console.warn("Background load error:", e);
+      }
     }
 
     onAuthStateChanged(auth, async (user) => {
@@ -529,31 +716,116 @@
       }
 
       await ensureMandatoryChats(user);
-      loadFriendsList(user);
+      loadFriendsFast(user);
 
-      document.getElementById('backBtn').addEventListener('click', () => {
-        window.location.href = 'dashboard.html';
-      });
-
+      // Add Friend with Gmail contact suggestion
       document.getElementById('addFriendBtn').addEventListener('click', async () => {
-        const { value: email } = await Swal.fire({
-          title: 'Add Friend',
+        const contactsAvailable = navigator.contacts && window.isSecureContext;
+        const inputLabel = contactsAvailable 
+          ? 'Enter email or click "Suggest" for Gmail contacts' 
+          : 'Enter friend’s Gmail';
+
+        const { value: email, isConfirmed, isDenied } = await Swal.fire({
+          title: 'Add Friend by Gmail',
           input: 'email',
-          inputLabel: 'Enter friend\'s Gmail',
+          inputLabel,
           inputPlaceholder: 'friend@gmail.com',
-          confirmButtonColor: '#e50914',
-          showCancelButton: true
+          showCancelButton: true,
+          showDenyButton: contactsAvailable,
+          denyButtonText: 'Suggest Contacts',
+          confirmButtonColor: '#00aaff'
         });
-        if (email) await addFriendByEmail(user, email);
+
+        if (!isConfirmed && !isDenied) return;
+
+        if (isDenied) {
+          const suggestions = await suggestGmailContacts();
+          if (suggestions.length > 0) {
+            const { value: selected } = await Swal.fire({
+              title: 'Select a contact',
+              input: 'select',
+              inputOptions: suggestions.reduce((acc, e) => ({ ...acc, [e]: e }), {}),
+              inputPlaceholder: 'Choose email',
+              showCancelButton: true
+            });
+            if (selected) {
+              const friendDoc = await getDoc(doc(db, 'users', selected));
+              if (!friendDoc.exists()) {
+                Swal.fire('Not Found', 'User not registered.', 'error');
+                return;
+              }
+              const friendUid = friendDoc.data().uid;
+              const ids = [user.uid, friendUid].sort();
+              const chatId = ids.join('_');
+              await setDoc(doc(db, 'chats', chatId), { participants: ids, createdAt: serverTimestamp() }, { merge: true });
+              Swal.fire('Success', 'Friend added!', 'success');
+              loadFriendsFast(user);
+            }
+          } else {
+            Swal.fire('No Contacts', 'No Gmail contacts found or access denied.', 'info');
+          }
+          return;
+        }
+
+        if (email?.trim()) {
+          const friendDoc = await getDoc(doc(db, 'users', email.trim()));
+          if (!friendDoc.exists()) {
+            Swal.fire('Not Found', 'User not found.', 'error');
+            return;
+          }
+          const friendUid = friendDoc.data().uid;
+          const ids = [user.uid, friendUid].sort();
+          const chatId = ids.join('_');
+          await setDoc(doc(db, 'chats', chatId), { participants: ids, createdAt: serverTimestamp() }, { merge: true });
+          Swal.fire('Success', 'Friend added!', 'success');
+          loadFriendsFast(user);
+        }
       });
 
+      // AI Button
       document.getElementById('aiFloatingBtn').addEventListener('click', () => {
         window.location.href = 'ai.html';
       });
-    });
 
-    window.addEventListener('beforeunload', () => {
-      cleanupListeners();
+      // Header Menu
+      const menuBtn = document.getElementById('menuBtn');
+      const menu = document.getElementById('headerMenu');
+      menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+      });
+      document.addEventListener('click', () => {
+        if (!menuBtn.contains(event.target) && !menu.contains(event.target)) {
+          menu.style.display = 'none';
+        }
+      });
+      menu.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', () => {
+          menu.style.display = 'none';
+          const action = item.dataset.action;
+          if (action === 'settings') {
+            window.location.href = 'settings.html';
+          } else if (action === 'starred') {
+            Swal.fire('Starred', 'Coming soon!', 'info');
+          } else if (action === 'read-all') {
+            // In a real app, you'd update all messages as seen in Firestore
+            for (const [chatId, count] of unreadCounts) {
+              if (count > 0) {
+                unreadCounts.set(chatId, 0);
+                const el = document.querySelector(`.friend-item[data-chat-id="${chatId}"]`);
+                const badge = el?.querySelector('.new-message-badge');
+                if (badge) badge.remove();
+              }
+            }
+            Swal.fire('Success', 'All messages marked as read.', 'success');
+          }
+        });
+      });
+
+      // Search
+      document.getElementById('searchBar').addEventListener('input', (e) => {
+        filter(e.target.value);
+      });
     });
   </script>
 </body>

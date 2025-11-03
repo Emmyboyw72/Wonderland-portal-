@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Audio Call</title>
+  <title>Video Call</title>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="https://cdn.agora.io/sdk/web/AgoraRTC_N-4.20.0.js"></script>
@@ -13,63 +13,96 @@
       background: #000;
       color: white;
       height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+      overflow: hidden;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    .call-header {
+    #remoteVideo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #000;
+    }
+    #localVideo {
+      position: absolute;
+      bottom: 90px;
+      right: 20px;
+      width: 130px;
+      height: 170px;
+      border-radius: 16px;
+      border: 2px solid white;
+      background: #111;
+      z-index: 10;
+      object-fit: cover;
+    }
+    .call-info {
+      position: absolute;
+      top: 60px;
+      left: 0;
+      right: 0;
       text-align: center;
-      margin-bottom: 40px;
-    }
-    .call-type {
-      font-size: 18px;
-      color: #2a9d8f;
-      margin-bottom: 10px;
-    }
-    .peer-name {
-      font-size: 32px;
+      font-size: 20px;
       font-weight: bold;
-      margin-bottom: 20px;
-    }
-    .status {
-      color: #aaa;
-      font-size: 18px;
-      margin-bottom: 40px;
+      z-index: 10;
     }
     .controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
-      gap: 30px;
+      gap: 28px;
+      z-index: 10;
     }
     .control-btn {
-      width: 70px;
-      height: 70px;
+      width: 65px;
+      height: 65px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 28px;
+      font-size: 26px;
+      color: white;
     }
-    #muteBtn { background: #2a9d8f; }
-    #hangupBtn { background: #e50914; }
+    #muteBtn { background: rgba(42, 157, 143, 0.85); }
+    #videoBtn { background: rgba(64, 169, 255, 0.85); }
+    #hangupBtn {
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      background: #e50914;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 30px;
+      color: white;
+      box-shadow: 0 4px 15px rgba(229, 9, 20, 0.6);
+      z-index: 10;
+    }
   </style>
 </head>
 <body>
 
-  <div class="call-header">
-    <div class="call-type">Audio Call</div>
-    <div class="peer-name" id="peerName">User</div>
-    <div class="status" id="callStatus">Calling...</div>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <video id="localVideo" autoplay muted playsinline></video>
+
+  <div class="call-info" id="peerName">User</div>
+
+  <div class="control-btn" id="hangupBtn">
+    <i class="fas fa-phone"></i>
   </div>
 
   <div class="controls">
     <div class="control-btn" id="muteBtn">
       <i class="fas fa-microphone"></i>
     </div>
-    <div class="control-btn" id="hangupBtn">
-      <i class="fas fa-phone"></i>
+    <div class="control-btn" id="videoBtn">
+      <i class="fas fa-video"></i>
     </div>
   </div>
 
@@ -105,18 +138,17 @@
     }
 
     let currentUser = null;
-    let rtc = { client: null, localAudioTrack: null };
+    let rtc = { client: null, localAudioTrack: null, localVideoTrack: null };
     let callStartTime = Date.now();
 
     const peerNameEl = document.getElementById('peerName');
-    const callStatus = document.getElementById('callStatus');
 
     async function logCall(durationSec, missed = false) {
       if (!currentUser) return;
       await addDoc(collection(db, 'call_history'), {
         callerId: isCaller ? currentUser.uid : peerUid,
         calleeId: isCaller ? peerUid : currentUser.uid,
-        type: 'audio',
+        type: 'video',
         duration: durationSec,
         missed,
         timestamp: serverTimestamp()
@@ -129,6 +161,7 @@
 
       if (rtc.client) {
         if (rtc.localAudioTrack) rtc.localAudioTrack.close();
+        if (rtc.localVideoTrack) rtc.localVideoTrack.close();
         await rtc.client.leave();
       }
       await deleteDoc(doc(db, 'calls', channel));
@@ -137,21 +170,21 @@
 
     async function initCall() {
       try {
-        rtc.client = AgoraRTC.createClient({ mode: "rtc", codec: "opus" });
+        rtc.client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
         await rtc.client.join(AGORA_APP_ID, channel, null, currentUser.uid);
 
+        rtc.localVideoTrack = await AgoraRTC.createCameraVideoTrack();
         rtc.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        await rtc.client.publish([rtc.localAudioTrack]);
+        await rtc.client.publish([rtc.localAudioTrack, rtc.localVideoTrack]);
+
+        document.getElementById('localVideo').srcObject = new MediaStream([rtc.localVideoTrack.getMediaStreamTrack()]);
 
         rtc.client.on("user-published", async (user, mediaType) => {
-          if (mediaType === "audio") {
-            await rtc.client.subscribe(user, mediaType);
-            callStatus.textContent = 'In call';
+          await rtc.client.subscribe(user, mediaType);
+          if (mediaType === "video") {
+            document.getElementById('remoteVideo').srcObject = user.videoTrack.getMediaStream();
+            peerNameEl.textContent = peerName;
           }
-        });
-
-        rtc.client.on("user-unpublished", () => {
-          callStatus.textContent = 'User left';
         });
 
       } catch (e) {
@@ -163,7 +196,6 @@
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = 'login.html';
       currentUser = user;
-      peerNameEl.textContent = peerName;
 
       onSnapshot(doc(db, 'calls', channel), (doc) => {
         if (!doc.exists()) {
@@ -181,6 +213,13 @@
         rtc.localAudioTrack.setEnabled(!enabled);
         document.getElementById('muteBtn').innerHTML = 
           enabled ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+      };
+      document.getElementById('videoBtn').onclick = () => {
+        if (!rtc.localVideoTrack) return;
+        const enabled = rtc.localVideoTrack.isEnabled;
+        rtc.localVideoTrack.setEnabled(!enabled);
+        document.getElementById('videoBtn').innerHTML = 
+          enabled ? '<i class="fas fa-video-slash"></i>' : '<i class="fas fa-video"></i>';
       };
 
       window.addEventListener('beforeunload', hangup);

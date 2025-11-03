@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Chat – wöndèlånd</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#000033">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
@@ -19,21 +21,22 @@
       margin: 0;
       padding: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f0f2f5;
-      color: #333;
+      background: conic-gradient(from 0deg, #000033, #000066, #003366, #0066cc, #000033, #000066);
+      color: #eee;
       display: flex;
       flex-direction: column;
       height: 100vh;
     }
 
     header {
-      background: white;
+      background: #0a0a1a;
       padding: 12px 16px;
       display: flex;
       align-items: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
       z-index: 100;
       position: relative;
+      color: white;
     }
 
     .back-btn {
@@ -42,7 +45,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #e50914;
+      color: #4da6ff;
       font-size: 20px;
       cursor: pointer;
     }
@@ -52,7 +55,7 @@
       text-align: center;
       font-weight: bold;
       font-size: 18px;
-      color: #333;
+      color: white;
     }
 
     .call-buttons {
@@ -64,15 +67,14 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: #f0f2f5;
+      background: #1a1a2e;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #e50914;
+      color: #4da6ff;
       cursor: pointer;
     }
 
-    /* Hide call buttons in self-chat */
     .call-buttons.hidden {
       display: none;
     }
@@ -93,32 +95,35 @@
       font-size: 14px;
       word-break: break-word;
       white-space: pre-wrap;
+      color: #333;
     }
 
     .sent {
-      background: #dcf8c6;
+      background: #2a6f97;
       align-self: flex-end;
       border-bottom-right-radius: 4px;
+      color: white;
     }
 
     .received {
-      background: white;
+      background: #1e1e2e;
       align-self: flex-start;
       border-bottom-left-radius: 4px;
+      color: #e0e0ff;
     }
 
     .reply-preview {
       font-size: 12px;
-      color: #555;
+      color: #aaa;
       margin-bottom: 3px;
       font-style: italic;
-      border-left: 2px solid #ccc;
+      border-left: 2px solid #444;
       padding-left: 6px;
     }
 
     .call-log {
-      background: #e9ecef;
-      color: #495057;
+      background: #2d2d44;
+      color: #aaa;
       text-align: center;
       align-self: center;
       max-width: 70%;
@@ -129,7 +134,7 @@
 
     .deleted-message {
       font-style: italic;
-      color: #999;
+      color: #888;
       text-align: center;
       align-self: center;
       max-width: 80%;
@@ -141,23 +146,23 @@
       justify-content: flex-end;
       margin-top: 2px;
       font-size: 10px;
-      color: #999;
+      color: #aaa;
     }
 
     .seen-indicator {
-      color: #999;
+      color: #aaa;
       margin-left: 4px;
     }
 
     .seen-indicator.red {
-      color: #e50914;
+      color: #ff4d4d;
     }
 
     .input-area {
       display: flex;
       padding: 8px 12px;
-      background: white;
-      border-top: 1px solid #e0e0e0;
+      background: #0f0f1f;
+      border-top: 1px solid #222;
       align-items: center;
       gap: 8px;
     }
@@ -166,11 +171,11 @@
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background: #f0f2f5;
+      background: #1a1a2e;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #555;
+      color: #88ccff;
       cursor: pointer;
     }
 
@@ -180,8 +185,9 @@
       outline: none;
       font-size: 15px;
       padding: 9px;
-      background: #f0f2f5;
+      background: #151525;
       border-radius: 20px;
+      color: white;
       -webkit-user-select: text;
       -moz-user-select: text;
       user-select: text;
@@ -191,7 +197,7 @@
       width: 42px;
       height: 42px;
       border-radius: 50%;
-      background: #e50914;
+      background: #0066cc;
       color: white;
       display: flex;
       align-items: center;
@@ -204,14 +210,15 @@
       bottom: 68px;
       left: 10px;
       right: 10px;
-      background: white;
+      background: #0a0a1a;
       border-radius: 12px;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.4);
       z-index: 200;
       display: none;
       max-height: 180px;
       overflow-y: auto;
       padding: 10px;
+      border: 1px solid #222;
     }
 
     .emoji-grid {
@@ -226,10 +233,11 @@
       cursor: pointer;
       padding: 6px;
       border-radius: 6px;
+      color: white;
     }
 
     .emoji-item:hover {
-      background: #f0f2f5;
+      background: #151525;
     }
   </style>
 </head>
@@ -251,7 +259,7 @@
   </header>
 
   <div class="messages-container" id="messagesContainer">
-    <div style="text-align:center; color:#999; padding:20px;">Loading messages...</div>
+    <div style="text-align:center; color:#aaa; padding:20px;">Loading messages...</div>
   </div>
 
   <div class="input-area">
@@ -268,12 +276,18 @@
     <div class="emoji-grid" id="emojiGrid"></div>
   </div>
 
-  <audio id="callSound" preload="auto">
-    <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav" type="audio/wav">
-  </audio>
+  <!-- Register Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+          .then(reg => console.log('SW registered'))
+          .catch(err => console.log('SW failed:', err));
+      });
+    }
+  </script>
 
   <script type="module">
-    // 🔥 FIXED: Removed trailing spaces in URLs
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { 
@@ -290,6 +304,7 @@
       where,
       updateDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
@@ -303,13 +318,54 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const messaging = getMessaging(app);
+
+    // Handle foreground messages
+    onMessage(messaging, (payload) => {
+      const notificationTitle = payload.notification?.title || 'New message';
+      const notificationBody = payload.notification?.body || '';
+      const peer = payload.data?.peer || '';
+      const name = payload.data?.name || 'User';
+
+      // Show in-app alert
+      Swal.fire({
+        title: notificationTitle,
+        text: notificationBody,
+        icon: 'info',
+        toast: true,
+        position: 'top-end',
+        timer: 3000,
+        showConfirmButton: false,
+        customClass: { popup: 'swal2-border-blue' }
+      });
+
+      // If not in this chat, offer to switch
+      const currentPeer = new URLSearchParams(window.location.search).get('peer');
+      if (peer && currentPeer !== peer) {
+        Swal.fire({
+          title: 'New message!',
+          text: `You have a new message from ${name}`,
+          icon: 'info',
+          showCancelButton: true,
+          confirmButtonText: 'Open Chat',
+          cancelButtonText: 'Dismiss',
+          confirmButtonColor: '#0066cc'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = `chat.html?peer=${encodeURIComponent(peer)}&name=${encodeURIComponent(name)}`;
+          }
+        });
+      }
+    });
 
     let currentUserData = null;
     let peerEmail = null;
     let peerName = null;
     let peerUid = null;
     let chatId = null;
-    let isSelfChat = false; // 🔑 Track if it's "Saved Messages"
+    let isSelfChat = false;
+    let allMessages = {};
+    let allCallLogs = {};
 
     const EMOJIS = [
       '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
@@ -334,19 +390,18 @@
     peerName = urlParams.get('name') || peerEmail?.split('@')[0] || 'User';
 
     if (!peerEmail) {
-      Swal.fire({ title: 'Error', text: 'Invalid chat link.', icon: 'error', confirmButtonColor: '#e50914' }).then(() => {
+      Swal.fire({ title: 'Error', text: 'Invalid chat link.', icon: 'error', confirmButtonColor: '#0066cc' }).then(() => {
         window.location.href = 'friends.html';
       });
     }
 
     document.getElementById('peerName').textContent = peerName;
 
-    // === EMOJI PICKER ===
+    // EMOJI PICKER
     const emojiPicker = document.getElementById('emojiPicker');
     const emojiGrid = document.getElementById('emojiGrid');
     const emojiBtn = document.getElementById('emojiBtn');
     const messageInput = document.getElementById('messageInput');
-    const callSound = document.getElementById('callSound');
     const callButtons = document.getElementById('callButtons');
 
     EMOJIS.forEach(emoji => {
@@ -365,7 +420,7 @@
               type: 'text'
             });
           } catch (err) {
-            Swal.fire({ title: 'Error', text: 'Failed to send emoji.', icon: 'error', confirmButtonColor: '#e50914' });
+            Swal.fire({ title: 'Error', text: 'Failed to send emoji.', icon: 'error', confirmButtonColor: '#0066cc' });
           }
         }
         emojiPicker.style.display = 'none';
@@ -384,14 +439,12 @@
       }
     });
 
-    // === NAVIGATION ===
+    // NAVIGATION
     document.getElementById('backBtn').addEventListener('click', () => window.location.href = 'friends.html');
-
-    // Call buttons - will be hidden for self-chat
     document.getElementById('audioCallBtn').addEventListener('click', () => window.location.href = `audio-call.html?peer=${encodeURIComponent(peerEmail)}&name=${encodeURIComponent(peerName)}`);
     document.getElementById('videoCallBtn').addEventListener('click', () => window.location.href = `video-call.html?peer=${encodeURIComponent(peerEmail)}&name=${encodeURIComponent(peerName)}`);
 
-    // === SEND MESSAGE ===
+    // SEND MESSAGE
     async function sendMessage() {
       const text = messageInput.value.trim();
       if (!text || !currentUserData || !peerUid) return;
@@ -408,12 +461,16 @@
           type: 'text',
           ...(replyTo ? { replyTo } : {})
         });
+
+        // Trigger notification to peer (via backend — you must implement this in Cloud Functions)
+        // For now, we assume your backend sends FCM when a message is written
+
         messageInput.value = '';
         sessionStorage.removeItem('replyTo');
         messageInput.placeholder = 'Type a message';
       } catch (err) {
         console.error("Send error:", err);
-        Swal.fire({ title: 'Error', text: 'Failed to send message.', icon: 'error', confirmButtonColor: '#e50914' });
+        Swal.fire({ title: 'Error', text: 'Failed to send message.', icon: 'error', confirmButtonColor: '#0066cc' });
       }
     }
 
@@ -425,7 +482,7 @@
       }
     });
 
-    // === RENDER MESSAGE ===
+    // RENDER
     function renderMessage(data, id) {
       if (data.type === 'callLog') {
         const el = document.createElement('div');
@@ -461,12 +518,10 @@
       content += `${data.text}<div class="message-meta">${time} ${seenIcon}</div>`;
       el.innerHTML = content;
 
-      // Mark received messages as seen
       if (!isSent && !data.seen) {
         updateDoc(doc(db, 'chats', chatId, 'messages', id), { seen: true });
       }
 
-      // Long press to reply (received)
       if (!isSent) {
         let timer;
         const start = () => timer = setTimeout(() => {
@@ -480,16 +535,15 @@
         ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev => el.addEventListener(ev, cancel));
       }
 
-      // Long press to delete (sent)
       if (isSent) {
         let timer;
         const start = () => timer = setTimeout(async () => {
-          const result = await Swal.fire({
+                    const result = await Swal.fire({
             title: 'Delete for everyone?',
             text: "This will delete the message for both of you.",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#e50914',
+            confirmButtonColor: '#0066cc',
             cancelButtonColor: '#6c757d',
             confirmButtonText: 'Delete'
           });
@@ -502,7 +556,7 @@
                 timestamp: serverTimestamp()
               });
             } catch (err) {
-              Swal.fire({ title: 'Error', text: 'Deletion failed.', icon: 'error', confirmButtonColor: '#e50914' });
+              Swal.fire({ title: 'Error', text: 'Deletion failed.', icon: 'error', confirmButtonColor: '#0066cc' });
             }
           }
         }, 500);
@@ -515,60 +569,55 @@
       return el;
     }
 
-    // === LOAD MESSAGES + CALL LOGS ===
-    function loadChatData() {
+    function renderAll() {
       const container = document.getElementById('messagesContainer');
-
-      const messagesUnsub = onSnapshot(
-        query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc')),
-        (snapshot) => {
-          const messages = {};
-          snapshot.forEach(doc => {
-            messages[doc.id] = { id: doc.id, ...doc.data() };
-          });
-          renderAll(container, messages);
-        }
-      );
-
-      const callLogsUnsub = onSnapshot(
-        query(collection(db, 'callLogs'), where('chatId', '==', chatId), orderBy('timestamp', 'asc')),
-        (snapshot) => {
-          const messages = {};
-          const messagesSnap = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
-          onSnapshot(messagesSnap, (msgSnap) => {
-            msgSnap.forEach(doc => {
-              messages[doc.id] = { id: doc.id, ...doc.data() };
-            });
-            snapshot.forEach(doc => {
-              messages[`call_${doc.id}`] = { id: `call_${doc.id}`, type: 'callLog', ...doc.data() };
-            });
-            renderAll(container, messages);
-          });
-        }
-      );
-    }
-
-    function renderAll(container, items) {
-      const sorted = Object.values(items).sort((a, b) => {
+      const allItems = { ...allMessages, ...allCallLogs };
+      const sorted = Object.values(allItems).sort((a, b) => {
         const timeA = a.timestamp?.toDate?.() || new Date(0);
         const timeB = b.timestamp?.toDate?.() || new Date(0);
         return timeA - timeB;
       });
 
       container.innerHTML = '';
-      sorted.forEach(item => {
-        container.appendChild(renderMessage(item, item.id));
-      });
+      if (sorted.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#888; padding:20px;">No messages yet</div>';
+      } else {
+        sorted.forEach(item => {
+          container.appendChild(renderMessage(item, item.id));
+        });
+      }
       container.scrollTop = container.scrollHeight;
     }
 
-    // === INIT ===
+    function initCallLogsListener() {
+      const q = query(collection(db, 'callLogs'), where('chatId', '==', chatId), orderBy('timestamp', 'asc'));
+      return onSnapshot(q, (snapshot) => {
+        allCallLogs = {};
+        snapshot.forEach(doc => {
+          allCallLogs[`call_${doc.id}`] = { id: `call_${doc.id}`, type: 'callLog', ...doc.data() };
+        });
+        renderAll();
+      });
+    }
+
+    function initMessagesListener() {
+      const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
+      return onSnapshot(q, (snapshot) => {
+        allMessages = {};
+        snapshot.forEach(doc => {
+          allMessages[doc.id] = { id: doc.id, ...doc.data() };
+        });
+        renderAll();
+      });
+    }
+
+    // AUTH & INIT
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = 'login.html';
 
       const userDoc = await getDoc(doc(db, 'users', user.email));
       if (!userDoc.exists() || !userDoc.data().username) {
-        Swal.fire({ title: 'Profile Error', text: 'Username is missing.', icon: 'error', confirmButtonColor: '#e50914' });
+        Swal.fire({ title: 'Profile Error', text: 'Username is missing.', icon: 'error', confirmButtonColor: '#0066cc' });
         return;
       }
 
@@ -579,7 +628,6 @@
       };
 
       try {
-        // Check if it's self-chat
         if (peerEmail === user.email) {
           isSelfChat = true;
           peerUid = user.uid;
@@ -594,12 +642,27 @@
 
         await setDoc(doc(db, 'chats', chatId), { participants: ids, createdAt: serverTimestamp() }, { merge: true });
 
-        // 🔑 HIDE CALL BUTTONS FOR SELF-CHAT
         if (isSelfChat) {
           callButtons.classList.add('hidden');
         }
 
-        loadChatData();
+        // Request FCM permission and store token
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          try {
+            const token = await getToken(messaging, {
+              vapidKey: "BMJz0V6s8Q1q9XyR6vY6d6uF6h4K4n4J4q4M4o4P4r4S4t4U4v4W4x4Y4z4A4B4C4D4E4F4G4H"
+            });
+            if (token) {
+              await setDoc(doc(db, 'users', user.email), { fcmToken: token }, { merge: true });
+            }
+          } catch (err) {
+            console.warn("FCM token error:", err);
+          }
+        }
+
+        initMessagesListener();
+        initCallLogsListener();
 
         const replyTo = sessionStorage.getItem('replyTo');
         if (replyTo) {
@@ -610,11 +673,17 @@
         }
       } catch (err) {
         console.error("Init error:", err);
-        Swal.fire({ title: 'Error', text: 'Chat unavailable.', icon: 'error', confirmButtonColor: '#e50914' }).then(() => {
+        Swal.fire({ title: 'Error', text: 'Chat unavailable.', icon: 'error', confirmButtonColor: '#0066cc' }).then(() => {
           window.location.href = 'friends.html';
         });
       }
     });
   </script>
+
+  <style>
+    .swal2-popup.swal2-border-blue {
+      border: 2px solid #0066cc !important;
+    }
+  </style>
 </body>
 </html>

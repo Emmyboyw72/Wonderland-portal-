@@ -2,32 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Prevent zooming -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Wonderland Portal</title>
 
-  <!-- SweetAlert2 -->
+  <!-- SweetAlert2 (Beautiful Alerts) -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <!-- Firebase -->
+  <!-- Firebase SDKs (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
   <style>
-    html {
-      touch-action: manipulation;
-    }
+    html { touch-action: manipulation; }
     body {
       -webkit-text-size-adjust: 100%;
       user-select: none;
-      background: linear-gradient(135deg, #fff9f9, #ffebee);
+      background: linear-gradient(135deg, black, black);
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
       padding: 20px;
-      color: #e50914;
+      color: blue;
       overflow: hidden;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
@@ -46,7 +43,7 @@
       position: absolute;
       width: 100%;
       height: 100%;
-      border: 3px solid #e50914;
+      border: 3px solid blue;
       border-radius: 50%;
       animation: pulse 2s infinite;
     }
@@ -57,7 +54,7 @@
       transform: translate(-50%, -50%);
       font-size: 64px;
       font-weight: 800;
-      background: linear-gradient(to right, #e50914, #ff6b6b);
+      background: linear-gradient(to right, lightblue, blue);
       -webkit-background-clip: text;
       color: transparent;
       font-family: 'Georgia', serif;
@@ -72,13 +69,13 @@
       font-size: 32px;
       font-weight: 800;
       margin-bottom: 12px;
-      background: linear-gradient(to right, #e50914, #c20817);
+      background: linear-gradient(to right, darkblue, blue);
       -webkit-background-clip: text;
       color: transparent;
     }
     .subtitle {
       font-size: 18px;
-      color: #555;
+      color: white;
       margin-bottom: 32px;
       line-height: 1.5;
     }
@@ -87,7 +84,7 @@
       width: 40px;
       height: 40px;
       border: 4px solid rgba(229, 9, 20, 0.2);
-      border-top: 4px solid #e50914;
+      border-top: 4px solid blue;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
@@ -98,7 +95,7 @@
     .status {
       margin-top: 20px;
       font-size: 16px;
-      color: #777;
+      color: white;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -112,18 +109,16 @@
       <div class="outer-circle"></div>
       <div class="inner-logo">W</div>
     </div>
-
     <h1>Wonderland Portal</h1>
     <p class="subtitle">Your gateway to live classes, friends, and learning</p>
-
     <div class="status">
       <div class="loader"></div>
-      <span>Verifying your session...</span>
+      <span>Checking your account...</span>
     </div>
   </div>
 
   <script>
-    // Firebase Config
+    // 🔥 Initialize Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyBbR8R_3_Xf6QQPaZf9WDRLovSycAI1bKQ",
       authDomain: "emmy-programmers.firebaseapp.com",
@@ -138,47 +133,63 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // Check login and security setup
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        const userRef = db.ref(`users/${user.uid}/security`);
-        userRef.once("value").then(snapshot => {
-          const data = snapshot.val();
+    // Handle authentication state
+    auth.onAuthStateChanged(async (user) => {
+      const statusElement = document.querySelector('.status');
+      statusElement.innerHTML = '<div class="loader"></div><span>Verifying your account...</span>';
 
-          if (data && (data.lockType === "password" || data.lockType === "fingerprint")) {
-            Swal.fire({
-              icon: "info",
-              title: "Security Check 🔒",
-              text: "Fingerprint or password lock is enabled.",
-              confirmButtonColor: "#e50914",
-              confirmButtonText: "Continue"
-            }).then(() => {
-              window.location.href = "security.html";
-            });
-          } else {
-            Swal.fire({
-              icon: "success",
-              title: "Welcome Back!",
-              text: "Redirecting to your dashboard...",
-              showConfirmButton: false,
-              timer: 1800
-            });
-            setTimeout(() => {
-              window.location.href = "dashboard.html";
-            }, 1800);
-          }
-        });
-      } else {
-        Swal.fire({
+      if (!user) {
+        // No signed-in user → go to signup
+        await Swal.fire({
           icon: "info",
           title: "Welcome to Wonderland ✨",
-          text: "Let's get you started.",
+          text: "Let's get you signed up!",
           showConfirmButton: false,
-          timer: 1800
+          timer: 1200
         });
-        setTimeout(() => {
-          window.location.href = "signup.html";
-        }, 1800);
+        window.location.href = "signup.html";
+        return;
+      }
+
+      try {
+        // Check if user has set any security lock (password or fingerprint)
+        const securityRef = db.ref(`users/${user.uid}/security`);
+        const snapshot = await securityRef.once("value");
+        const securityData = snapshot.val();
+
+        // If security exists and has a lockType (passkey implies lockType set)
+        if (securityData && (securityData.lockType === "password" || securityData.lockType === "fingerprint")) {
+          // Redirect to security unlock screen
+          await Swal.fire({
+            icon: "info",
+            title: "Security Check",
+            text: "Verifying your identity...",
+            showConfirmButton: false,
+            timer: 1000
+          });
+          window.location.href = "security.html";
+        } else {
+          // No security lock set → go directly to friends
+          await Swal.fire({
+            icon: "success",
+            title: "Welcome Back!",
+            text: "Loading your chats...",
+            showConfirmButton: false,
+            timer: 1000
+          });
+          window.location.href = "friends.html";
+        }
+      } catch (error) {
+        console.error("Error checking security settings:", error);
+        // On error (e.g., network issue), assume no lock and go to friends
+        await Swal.fire({
+          icon: "success",
+          title: "Welcome!",
+          text: "Loading your dashboard...",
+          showConfirmButton: false,
+          timer: 1000
+        });
+        window.location.href = "friends.html";
       }
     });
   </script>

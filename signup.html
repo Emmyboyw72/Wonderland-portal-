@@ -2,16 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- 🔒 Prevent zooming -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  
   <title>Sign Up - Wonderland</title>
+
+  <!-- PWA Required Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1E90FF">
+  <link rel="icon" href="/icon-192.png">
   
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
   <style>
-    /* 🔒 Disable zoom via CSS */
+    /* ... your existing CSS ... */
     html {
       touch-action: manipulation;
     }
@@ -34,7 +38,7 @@
     }
 
     body {
-      background: white;
+      background: black;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -45,16 +49,16 @@
     .signup-container {
       width: 100%;
       max-width: 420px;
-      background: #fff;
+      background: black;
       padding: 32px;
       border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(229, 9, 20, 0.12);
-      border: 2px solid #e50914;
+      box-shadow: 0 8px 24px rgba(30, 144, 255, 0.15);
+      border: 2px solid #1E90FF;
     }
 
     h2 {
       text-align: center;
-      color: #e50914;
+      color: #1E90FF;
       margin-bottom: 24px;
       font-size: 28px;
       font-weight: 800;
@@ -67,7 +71,7 @@
     label {
       display: block;
       margin-bottom: 8px;
-      color: #333;
+      color: #ddd;
       font-weight: 600;
       font-size: 15px;
     }
@@ -75,7 +79,9 @@
     input {
       width: 100%;
       padding: 14px;
-      border: 1px solid #ddd;
+      background: #111;
+      color: white;
+      border: 1px solid #444;
       border-radius: 10px;
       font-size: 16px;
       transition: all 0.3s;
@@ -83,8 +89,8 @@
 
     input:focus {
       outline: none;
-      border-color: #e50914;
-      box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.15);
+      border-color: #1E90FF;
+      box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.2);
     }
 
     .checkbox-group {
@@ -97,18 +103,18 @@
       width: auto;
       margin-right: 12px;
       margin-top: 4px;
-      accent-color: #e50914;
+      accent-color: #1E90FF;
     }
 
     .checkbox-group label {
       font-weight: normal;
-      color: #555;
+      color: #bbb;
       font-size: 14px;
       line-height: 1.5;
     }
 
     .checkbox-group a {
-      color: #e50914;
+      color: #1E90FF;
       text-decoration: none;
       font-weight: 600;
     }
@@ -116,7 +122,7 @@
     .btn {
       width: 100%;
       padding: 16px;
-      background: #e50914;
+      background: #1E90FF;
       color: white;
       border: none;
       border-radius: 10px;
@@ -127,7 +133,7 @@
     }
 
     .btn:hover {
-      background: #c20817;
+      background: #007BFF;
       transform: translateY(-2px);
     }
 
@@ -140,14 +146,39 @@
     .login-link {
       text-align: center;
       margin-top: 24px;
-      color: #555;
+      color: #bbb;
       font-size: 15px;
     }
 
     .login-link a {
-      color: #e50914;
+      color: #1E90FF;
       text-decoration: none;
       font-weight: bold;
+    }
+
+    /* Install button - ALWAYS VISIBLE FOR TESTING */
+    #installAppBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #1E90FF;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 1000;
+      font-size: 24px;
+      transition: transform 0.2s;
+    }
+
+    #installAppBtn:hover {
+      transform: scale(1.1);
     }
   </style>
 </head>
@@ -188,7 +219,90 @@
     </div>
   </div>
 
+  <!-- Install App Button - Always visible for testing -->
+  <button id="installAppBtn" title="Install Wonderland App">
+    <i class="fas fa-download"></i>
+  </button>
+
+  <script>
+    // ALWAYS SHOW INSTALL BUTTON FOR TESTING
+    document.getElementById('installAppBtn').style.display = 'flex';
+
+    // Simulate PWA installation
+    document.getElementById('installAppBtn').addEventListener('click', () => {
+      Swal.fire({
+        title: '<strong>Install Wonderland</strong>',
+        html: `
+          <div style="text-align: center; color: #ccc;">
+            <p>To install this app:</p>
+            <ol style="text-align: left; margin: 15px 0;">
+              <li>Open in <strong>Chrome</strong> (Android)</li>
+              <li>Tap <strong>⋮ (menu)</strong></li>
+              <li>Select <strong>"Install app"</strong></li>
+            </ol>
+            <p style="font-size: 14px; margin-top: 15px;">
+              <i class="fas fa-info-circle"></i> Requires HTTPS (works on localhost)
+            </p>
+          </div>
+        `,
+        icon: 'info',
+        confirmButtonText: 'Got it!',
+        confirmButtonColor: '#1E90FF',
+        customClass: { popup: 'swal2-border-blue' }
+      });
+    });
+
+    // Register service worker immediately
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registered'))
+          .catch(err => console.error('SW registration failed:', err));
+      });
+    }
+
+    // Beautiful alert helper
+    function showBeautifulAlert(title, html, icon, confirmText = 'OK') {
+      const config = {
+        title: title,
+        html: html,
+        icon: icon,
+        confirmButtonText: confirmText,
+        confirmButtonColor: '#1E90FF',
+        customClass: { popup: 'swal2-border-blue' }
+      };
+
+      if (icon === 'loading') {
+        config.allowOutsideClick = false;
+        config.allowEscapeKey = false;
+        config.didOpen = () => Swal.showLoading();
+        delete config.icon;
+      }
+
+      return Swal.fire(config);
+    }
+
+    // Custom alert styling
+    const style = document.createElement('style');
+    style.textContent = `
+      .swal2-border-blue {
+        border: 2px solid #1E90FF !important;
+        border-radius: 16px !important;
+      }
+      .swal2-popup .swal2-styled.swal2-confirm {
+        background: #1E90FF !important;
+        border-radius: 10px !important;
+        font-weight: bold !important;
+      }
+      .swal2-popup .swal2-styled.swal2-confirm:hover {
+        background: #007BFF !important;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+
   <script type="module">
+    // ... your existing Firebase signup code ...
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -214,7 +328,6 @@
       const password = document.getElementById('password').value;
       const terms = document.getElementById('terms').checked;
 
-      // Validation
       if (!username || username.length < 3) {
         showBeautifulAlert('Oops!', 'Username must be at least 3 characters.', 'warning');
         return;
@@ -239,18 +352,13 @@
       showBeautifulAlert('Creating Account...', 'Setting up your profile...', 'loading');
 
       try {
-        // Create user
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-
-        // Send email verification
         await sendEmailVerification(user);
 
-        // Save to Firestore under EMAIL
-        const { getFirestore, doc, setDoc, collection } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        const { getFirestore, doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
         const db = getFirestore(app);
 
-        // Create user document
         await setDoc(doc(db, "users", email), {
           uid: user.uid,
           username: username,
@@ -261,19 +369,17 @@
           createdAt: new Date().toISOString()
         });
 
-        // Auto-create friends subcollection
+        // Initialize user collections
         await setDoc(doc(db, "friends", email, "meta", "info"), {
           initialized: true,
           createdAt: new Date().toISOString()
         });
 
-        // Auto-create messages root collection entry (optional placeholder)
         await setDoc(doc(db, "messages", email), {
           initialized: true,
           timestamp: new Date().toISOString()
         });
 
-        // Auto-create liveComments if needed
         await setDoc(doc(db, "liveComments", email), {
           uid: user.uid,
           username: username,
@@ -308,7 +414,7 @@
       Swal.fire({
         title: '<strong>Wonderland Community Guidelines</strong>',
         html: `
-          <ul style="text-align: left; line-height: 1.7; color:#444;">
+          <ul style="text-align: left; line-height: 1.7; color:#ccc;">
             <li>Be respectful to all users.</li>
             <li>No hate speech, bullying, or harassment.</li>
             <li>Do not share personal or sensitive information.</li>
@@ -318,56 +424,12 @@
         `,
         icon: 'info',
         confirmButtonText: 'I Understand',
-        confirmButtonColor: '#e50914',
+        confirmButtonColor: '#1E90FF',
         customClass: {
-          popup: 'swal2-border'
+          popup: 'swal2-border-blue'
         }
       });
     }
-
-    function showBeautifulAlert(title, html, icon, confirmText = 'OK') {
-      const config = {
-        title: title,
-        html: html,
-        icon: icon,
-        confirmButtonText: confirmText,
-        confirmButtonColor: '#e50914',
-        customClass: {
-          popup: 'swal2-border',
-          title: icon === 'success' ? 'swal2-title-success' : ''
-        }
-      };
-
-      if (icon === 'loading') {
-        config.allowOutsideClick = false;
-        config.allowEscapeKey = false;
-        config.didOpen = () => Swal.showLoading();
-        delete config.icon;
-      }
-
-      return Swal.fire(config);
-    }
-
-    // Custom styles for alerts
-    const style = document.createElement('style');
-    style.textContent = `
-      .swal2-border {
-        border: 2px solid #e50914 !important;
-        border-radius: 16px !important;
-      }
-      .swal2-title-red {
-        color: #e50914 !important;
-      }
-      .swal2-popup .swal2-styled.swal2-confirm {
-        background: #e50914 !important;
-        border-radius: 10px !important;
-        font-weight: bold !important;
-      }
-      .swal2-popup .swal2-styled.swal2-confirm:hover {
-        background: #c20817 !important;
-      }
-    `;
-    document.head.appendChild(style);
   </script>
 </body>
 </html>
